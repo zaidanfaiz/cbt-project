@@ -634,6 +634,7 @@ app.post('/api/storage/upload', async (req, res) => {
 
 app.get('/api/flashcards', async (req, res) => {
   try {
+    await seedSamplesForUser(req.insforge, req.user.id);
     res.json({ flashcards: await dbSelect('flashcards', '*', req.insforge) });
   } catch (error) {
     sendError(res, error);
@@ -721,6 +722,7 @@ app.post('/api/adu-kata/bulk', async (req, res) => {
 
 app.get('/api/cloze', async (req, res) => {
   try {
+    await seedSamplesForUser(req.insforge, req.user.id);
     const rows = await dbSelect('cloze_tests', '*', req.insforge);
     res.json({ tests: rows.map(mapCloze) });
   } catch (error) {
