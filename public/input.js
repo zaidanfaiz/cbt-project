@@ -1,9 +1,7 @@
 const questionForm = document.querySelector('#question-form');
 const bulkForm = document.querySelector('#bulk-form');
 const bulkFile = document.querySelector('#bulk-file');
-const storageForm = document.querySelector('#storage-form');
-const storageFile = document.querySelector('#storage-file');
-const storageSnippet = document.querySelector('#storage-snippet');
+const inlineUploadFile = document.querySelector('#inline-upload-file');
 const questionAttachmentPreview = document.querySelector('#question-attachment-preview');
 const questionStatus = document.querySelector('#question-status');
 const bulkStatus = document.querySelector('#bulk-status');
@@ -30,6 +28,7 @@ let catalog = [];
 let questions = [];
 let previewQuestions = [];
 let previewIndex = 0;
+let activeUploadTarget = null;
 
 function attachmentMarkup(record) {
   if (!record || !record.attachment_url) return '';
@@ -55,6 +54,54 @@ function setQuestionAttachment(file) {
     attachment_name: questionForm.elements.attachment_name.value,
     attachment_mime: questionForm.elements.attachment_mime.value,
   });
+}
+
+function uploadSnippet(file, uploaded) {
+  const url = uploaded && uploaded.url;
+  const name = file.name || 'Lampiran';
+  if (!url) return '';
+  if (file.type.startsWith('image/')) {
+    return `<img src="${url}" alt="${name}">`;
+  }
+  return `<a href="${url}" target="_blank" rel="noreferrer">${name}</a>`;
+}
+
+function uploadTargetLabel(name) {
+  const labels = {
+    question_text: 'Teks soal',
+    option_a: 'Opsi A',
+    option_b: 'Opsi B',
+    option_c: 'Opsi C',
+    option_d: 'Opsi D',
+    option_e: 'Opsi E',
+    explanation: 'Pembahasan',
+  };
+  return labels[name] || 'field tujuan';
+}
+
+function insertAtCursor(textarea, snippet) {
+  const start = textarea.selectionStart ?? textarea.value.length;
+  const end = textarea.selectionEnd ?? textarea.value.length;
+  const before = textarea.value.slice(0, start);
+  const after = textarea.value.slice(end);
+  const prefix = before && !before.endsWith('\n') ? '\n' : '';
+  const suffix = after && !after.startsWith('\n') ? '\n' : '';
+  textarea.value = `${before}${prefix}${snippet}${suffix}${after}`;
+  const cursor = before.length + prefix.length + snippet.length;
+  textarea.focus();
+  textarea.setSelectionRange(cursor, cursor);
+}
+
+async function uploadFileToStorage(file) {
+  const formData = new FormData();
+  formData.append('file', file);
+  const response = await fetch('/api/storage/upload', {
+    method: 'POST',
+    body: formData,
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error || 'Upload file gagal.');
+  return data.file;
 }
 
 function setStatus(target, message, isError = false) {
@@ -330,32 +377,32 @@ bulkForm.addEventListener('submit', async (event) => {
   }
 });
 
-storageForm.addEventListener('submit', async (event) => {
-  event.preventDefault();
-  const file = storageFile.files && storageFile.files[0];
+document.addEventListener('click', (event) => {
+  const button = event.target.closest('[data-upload-target]');
+  if (!button) return;
+  activeUploadTarget = button.dataset.uploadTarget;
+  inlineUploadFile.value = '';
+  inlineUploadFile.click();
+});
+
+inlineUploadFile.addEventListener('change', async () => {
+  const file = inlineUploadFile.files && inlineUploadFile.files[0];
   if (!file) {
-    setStatus(storageStatus, 'Pilih gambar terlebih dahulu.', true);
     return;
   }
 
   try {
-    const formData = new FormData();
-    formData.append('file', file);
-    const response = await fetch('/api/storage/upload', {
-      method: 'POST',
-      body: formData,
-    });
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.error || 'Upload gambar gagal.');
-
-    const url = data.file && data.file.url;
-    storageSnippet.value = file.type.startsWith('image/') ? `<img src="${url}" alt="">` : url;
+    setStatus(storageStatus, `Mengupload ${file.name} ke ${uploadTargetLabel(activeUploadTarget)}...`);
+    const uploaded = await uploadFileToStorage(file);
+    const target = activeUploadTarget && questionForm.elements[activeUploadTarget];
+    if (!target) throw new Error('Target field upload tidak ditemukan.');
+    insertAtCursor(target, uploadSnippet(file, uploaded));
     setQuestionAttachment({
-      ...data.file,
+      ...uploaded,
       name: file.name,
       mimeType: file.type,
     });
-    setStatus(storageStatus, 'File berhasil diupload dan dilampirkan ke soal manual berikutnya.');
+    setStatus(storageStatus, `File berhasil disisipkan ke ${uploadTargetLabel(activeUploadTarget)}.`);
   } catch (error) {
     setStatus(storageStatus, error.message, true);
   }

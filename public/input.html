@@ -29,7 +29,7 @@
         <div class="section-heading">
           <p class="section-label">Bank Soal Pribadi</p>
           <h1>Tambah soal sesuai struktur ujian</h1>
-          <p class="muted-text">Pilih Subtes dan Materi, lalu tulis soal, opsi, jawaban benar, dan pembahasan. Semua data tersimpan di InsForge PostgreSQL tanpa login atau role.</p>
+          <p class="muted-text">Pilih Subtes dan Materi, lalu tulis soal, opsi, jawaban benar, dan pembahasan. Semua data tersimpan di InsForge PostgreSQL untuk akun Anda.</p>
         </div>
 
         <form id="question-form" class="stack-form">
@@ -43,16 +43,34 @@
               <select name="materi_key" required></select>
             </label>
           </div>
-          <label>
-            Teks soal
+          <label class="rich-field">
+            <span class="field-toolbar">
+              <span>Teks soal</span>
+              <button class="inline-upload-button" type="button" data-upload-target="question_text">Upload Gambar/File</button>
+            </span>
             <textarea name="question_text" rows="5" placeholder="Tulis soal dan rumus LaTeX, contoh: $\\frac{2}{3}$" required></textarea>
           </label>
           <div class="options-grid">
-            <label>Opsi A <textarea name="option_a" rows="2" required></textarea></label>
-            <label>Opsi B <textarea name="option_b" rows="2" required></textarea></label>
-            <label>Opsi C <textarea name="option_c" rows="2" required></textarea></label>
-            <label>Opsi D <textarea name="option_d" rows="2" required></textarea></label>
-            <label>Opsi E <textarea name="option_e" rows="2" required></textarea></label>
+            <label class="rich-field">
+              <span class="field-toolbar"><span>Opsi A</span><button class="inline-upload-button" type="button" data-upload-target="option_a">Upload</button></span>
+              <textarea name="option_a" rows="2" required></textarea>
+            </label>
+            <label class="rich-field">
+              <span class="field-toolbar"><span>Opsi B</span><button class="inline-upload-button" type="button" data-upload-target="option_b">Upload</button></span>
+              <textarea name="option_b" rows="2" required></textarea>
+            </label>
+            <label class="rich-field">
+              <span class="field-toolbar"><span>Opsi C</span><button class="inline-upload-button" type="button" data-upload-target="option_c">Upload</button></span>
+              <textarea name="option_c" rows="2" required></textarea>
+            </label>
+            <label class="rich-field">
+              <span class="field-toolbar"><span>Opsi D</span><button class="inline-upload-button" type="button" data-upload-target="option_d">Upload</button></span>
+              <textarea name="option_d" rows="2" required></textarea>
+            </label>
+            <label class="rich-field">
+              <span class="field-toolbar"><span>Opsi E</span><button class="inline-upload-button" type="button" data-upload-target="option_e">Upload</button></span>
+              <textarea name="option_e" rows="2" required></textarea>
+            </label>
           </div>
           <div class="form-row">
             <label>
@@ -70,8 +88,11 @@
               <input name="points" type="number" min="0" value="4" required />
             </label>
           </div>
-          <label>
-            Pembahasan
+          <label class="rich-field">
+            <span class="field-toolbar">
+              <span>Pembahasan</span>
+              <button class="inline-upload-button" type="button" data-upload-target="explanation">Upload Gambar/File</button>
+            </span>
             <textarea name="explanation" rows="4" placeholder="Opsional. Bisa memakai LaTeX."></textarea>
           </label>
           <input name="attachment_url" type="hidden" />
@@ -110,26 +131,14 @@
         <div class="divider"></div>
 
         <div class="section-heading">
-          <p class="section-label">Storage Lampiran</p>
-          <h2>Upload File ke InsForge</h2>
-          <p class="muted-text">Unggah file, lalu lampirkan ke soal manual berikutnya atau tempel URL-nya ke konten latihan.</p>
-        </div>
-        <form id="storage-form" class="stack-form">
-          <label>
-            File lampiran
-            <input id="storage-file" name="file" type="file" />
-          </label>
-          <div class="form-actions">
-            <button class="button primary" type="submit">Upload File</button>
-          </div>
-          <label>
-            Tag/URL siap pakai
-            <textarea id="storage-snippet" rows="3" readonly placeholder="Hasil upload akan muncul di sini."></textarea>
-          </label>
-          <p class="muted-text">File yang diupload juga otomatis dilampirkan ke soal manual berikutnya yang Anda simpan.</p>
+          <p class="section-label">Storage InsForge</p>
+          <h2>Upload langsung ke field</h2>
+          <p class="muted-text">Gunakan tombol upload di Teks Soal, Opsi A-E, atau Pembahasan. File akan otomatis disisipkan ke field tersebut.</p>
           <p id="storage-status" class="status-text" role="status"></p>
-        </form>
+        </div>
       </section>
+
+      <input id="inline-upload-file" type="file" hidden />
 
       <section class="panel">
         <div class="section-heading inline">
