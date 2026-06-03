@@ -1139,6 +1139,39 @@ label {
   vertical-align: baseline;
 }
 
+.cloze-blank {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 2px;
+  vertical-align: baseline;
+}
+
+.cloze-answer-feedback {
+  display: inline-flex;
+  min-height: 24px;
+  align-items: center;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1.15;
+  padding: 3px 8px;
+}
+
+.cloze-answer-feedback:empty {
+  display: none;
+}
+
+.cloze-answer-feedback.correct {
+  background: var(--green-soft);
+  color: var(--green);
+}
+
+.cloze-answer-feedback.wrong {
+  background: var(--red-soft);
+  color: var(--red);
+}
+
 .cloze-native-select {
   display: none;
 }

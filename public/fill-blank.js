@@ -56,19 +56,26 @@ function normalizeTests(payload) {
 }
 
 function blankControl(blank) {
+  const feedback = `<span class="cloze-answer-feedback" data-answer-feedback="${blank.id}"></span>`;
   if (blank.type === 'dropdown') {
-    return `<span class="cloze-dropdown" data-dropdown-id="${blank.id}">
-      <select class="cloze-control cloze-native-select" data-blank-id="${blank.id}">
-      <option value="">Pilih</option>
-      ${blank.options.map((option) => `<option value="${option}">${option}</option>`).join('')}
-      </select>
-      <button class="cloze-dropdown-button" type="button" data-dropdown-toggle="${blank.id}">Pilih</button>
-      <span class="cloze-dropdown-menu" hidden>
-        ${blank.options.map((option) => `<button type="button" data-dropdown-option="${blank.id}" data-value="${option}">${option}</button>`).join('')}
+    return `<span class="cloze-blank">
+      <span class="cloze-dropdown" data-dropdown-id="${blank.id}">
+        <select class="cloze-control cloze-native-select" data-blank-id="${blank.id}">
+        <option value="">Pilih</option>
+        ${blank.options.map((option) => `<option value="${option}">${option}</option>`).join('')}
+        </select>
+        <button class="cloze-dropdown-button" type="button" data-dropdown-toggle="${blank.id}">Pilih</button>
+        <span class="cloze-dropdown-menu" hidden>
+          ${blank.options.map((option) => `<button type="button" data-dropdown-option="${blank.id}" data-value="${option}">${option}</button>`).join('')}
+        </span>
       </span>
+      ${feedback}
     </span>`;
   }
-  return `<input class="cloze-control" data-blank-id="${blank.id}" type="text" placeholder="..." />`;
+  return `<span class="cloze-blank">
+    <input class="cloze-control" data-blank-id="${blank.id}" type="text" placeholder="..." />
+    ${feedback}
+  </span>`;
 }
 
 function renderPassage(test) {
@@ -135,14 +142,21 @@ checkButton.addEventListener('click', () => {
   let correct = 0;
   for (const blank of test.blanks) {
     const control = passageEl.querySelector(`[data-blank-id="${blank.id}"]`);
+    const feedback = passageEl.querySelector(`[data-answer-feedback="${blank.id}"]`);
     const value = String(control.value || '').trim().toLowerCase();
     const answer = String(blank.answer || '').trim().toLowerCase();
     const isCorrect = value === answer;
     control.classList.toggle('correct', isCorrect);
     control.classList.toggle('wrong', !isCorrect);
+    if (feedback) {
+      feedback.classList.toggle('correct', isCorrect);
+      feedback.classList.toggle('wrong', !isCorrect);
+      feedback.innerHTML = isCorrect ? 'Benar' : `Jawaban: ${blank.answer}`;
+    }
     if (isCorrect) correct += 1;
   }
   feedbackEl.textContent = `${correct} dari ${test.blanks.length} jawaban benar.`;
+  renderMath();
 });
 
 passageEl.addEventListener('click', (event) => {
@@ -166,7 +180,24 @@ passageEl.addEventListener('click', (event) => {
     select.value = option.dataset.value;
     button.innerHTML = option.innerHTML;
     menu.hidden = true;
+    select.classList.remove('correct', 'wrong');
+    const feedback = passageEl.querySelector(`[data-answer-feedback="${id}"]`);
+    if (feedback) {
+      feedback.textContent = '';
+      feedback.classList.remove('correct', 'wrong');
+    }
     renderMath();
+  }
+});
+
+passageEl.addEventListener('input', (event) => {
+  const control = event.target.closest('[data-blank-id]');
+  if (!control) return;
+  control.classList.remove('correct', 'wrong');
+  const feedback = passageEl.querySelector(`[data-answer-feedback="${control.dataset.blankId}"]`);
+  if (feedback) {
+    feedback.textContent = '';
+    feedback.classList.remove('correct', 'wrong');
   }
 });
 
