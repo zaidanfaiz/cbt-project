@@ -1,5 +1,3 @@
-import { createClient } from '/vendor/insforge-sdk/index.mjs';
-
 const form = document.querySelector('#auth-form');
 const nameRow = document.querySelector('#auth-name-row');
 const nameField = document.querySelector('#auth-name');
@@ -11,7 +9,6 @@ const googleButton = document.querySelector('#auth-google');
 const statusEl = document.querySelector('#auth-status');
 
 let mode = 'signin';
-let insforgeClient = null;
 
 function nextUrl() {
   const params = new URLSearchParams(window.location.search);
@@ -28,31 +25,6 @@ function setMode(nextMode) {
   nameRow.hidden = mode !== 'signup';
   submitButton.textContent = mode === 'signup' ? 'Daftar' : 'Masuk';
   modeButtons.forEach((button) => button.classList.toggle('active', button.dataset.authMode === mode));
-}
-
-async function configClient() {
-  if (insforgeClient) return insforgeClient;
-  const response = await fetch('/api/auth/config');
-  const data = await response.json();
-  if (!response.ok) throw new Error(data.error || 'Gagal membaca konfigurasi auth.');
-  insforgeClient = createClient({
-    baseUrl: data.base_url,
-    anonKey: data.anon_key,
-  });
-  return insforgeClient;
-}
-
-async function syncOAuthSession() {
-  if (!window.location.search.includes('insforge_code=')) return;
-  setStatus('Memproses login Google...');
-  const client = await configClient();
-  const { data, error } = await client.auth.getCurrentUser();
-  if (error) throw error;
-  const headers = client.getHttpClient().getHeaders();
-  const token = String(headers.Authorization || '').replace(/^Bearer\s+/i, '');
-  if (!token || !data || !data.user) throw new Error('Token Google OAuth tidak ditemukan.');
-  window.ZDNCHAuth.setSession(token, data.user);
-  window.location.href = nextUrl();
 }
 
 modeButtons.forEach((button) => {
@@ -87,21 +59,14 @@ form.addEventListener('submit', async (event) => {
   }
 });
 
-googleButton.addEventListener('click', async () => {
-  try {
-    setStatus('Membuka Google...');
-    const client = await configClient();
-    const { data, error } = await client.auth.signInWithOAuth('google', {
-      redirectTo: `${window.location.origin}/auth?next=${encodeURIComponent(nextUrl())}`,
-      skipBrowserRedirect: true,
-      additionalParams: { prompt: 'select_account' },
-    });
-    if (error) throw error;
-    window.location.href = data.url;
-  } catch (error) {
-    setStatus(error.message, true);
-  }
+googleButton.addEventListener('click', () => {
+  setStatus('Membuka Google...');
+  window.location.href = `/api/auth/google/start?next=${encodeURIComponent(nextUrl())}`;
 });
 
+const params = new URLSearchParams(window.location.search);
+if (params.get('error')) {
+  setStatus(params.get('error'), true);
+}
+
 setMode('signin');
-syncOAuthSession().catch((error) => setStatus(error.message, true));

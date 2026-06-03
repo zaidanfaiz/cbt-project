@@ -109,6 +109,17 @@ function bearerToken(req) {
   return header.startsWith('Bearer ') ? header.slice(7).trim() : '';
 }
 
+function cookieValue(req, name) {
+  const cookies = String(req.headers.cookie || '').split(';');
+  const pair = cookies.map((cookie) => cookie.trim()).find((cookie) => cookie.startsWith(`${name}=`));
+  return pair ? decodeURIComponent(pair.slice(name.length + 1)) : '';
+}
+
+function safeNextPath(value) {
+  const next = String(value || '/');
+  return next.startsWith('/') && !next.startsWith('//') ? next : '/';
+}
+
 async function requireAuth(req, res, next) {
   const token = bearerToken(req);
   if (!token) {
@@ -467,6 +478,52 @@ app.post('/api/auth/google', async (req, res) => {
     res.json({ url: data && data.url });
   } catch (error) {
     sendError(res, error, 400);
+  }
+});
+
+app.get('/api/auth/google/start', async (req, res) => {
+  try {
+    const client = await createInsforgeClient();
+    const next = safeNextPath(req.query.next);
+    const redirectTo = `${req.protocol}://${req.get('host')}/api/auth/google/callback?next=${encodeURIComponent(next)}`;
+    const { data, error } = await client.auth.signInWithOAuth('google', {
+      redirectTo,
+      skipBrowserRedirect: true,
+      additionalParams: { prompt: 'select_account' },
+    });
+    if (error) throw error;
+    if (!data || !data.url || !data.codeVerifier) throw new Error('URL Google OAuth tidak tersedia.');
+    const secure = req.protocol === 'https' ? '; Secure' : '';
+    res.setHeader('Set-Cookie', `zdnch_google_pkce=${encodeURIComponent(data.codeVerifier)}; Path=/; Max-Age=600; SameSite=Lax; HttpOnly${secure}`);
+    res.redirect(data.url);
+  } catch (error) {
+    sendError(res, error, 400);
+  }
+});
+
+app.get('/api/auth/google/callback', async (req, res) => {
+  try {
+    const code = String(req.query.insforge_code || '');
+    const verifier = cookieValue(req, 'zdnch_google_pkce');
+    const next = safeNextPath(req.query.next);
+    if (!code || !verifier) throw new Error('Callback Google tidak lengkap. Silakan coba masuk ulang.');
+    const client = await createInsforgeClient();
+    const { data, error } = await client.auth.exchangeOAuthCode(code, verifier);
+    if (error) throw error;
+    res.setHeader('Set-Cookie', 'zdnch_google_pkce=; Path=/; Max-Age=0; SameSite=Lax; HttpOnly');
+    res.type('html').send(`<!doctype html>
+<html lang="id">
+  <head><meta charset="utf-8"><title>Memproses Login</title></head>
+  <body>
+    <script>
+      localStorage.setItem('zdnch-insforge-access-token', ${JSON.stringify(data.accessToken)});
+      localStorage.setItem('zdnch-insforge-user', ${JSON.stringify(JSON.stringify(data.user))});
+      window.location.replace(${JSON.stringify(next)});
+    </script>
+  </body>
+</html>`);
+  } catch (error) {
+    res.redirect(`/auth?error=${encodeURIComponent(error.message || 'Login Google gagal.')}`);
   }
 });
 
