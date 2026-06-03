@@ -30,15 +30,35 @@
   }
 
   const nativeFetch = window.fetch.bind(window);
-  window.fetch = (input, init = {}) => {
+  function isAuthEndpoint(pathname) {
+    return pathname.startsWith('/api/auth/signin')
+      || pathname.startsWith('/api/auth/signup')
+      || pathname.startsWith('/api/auth/google')
+      || pathname.startsWith('/api/auth/config');
+  }
+
+  function redirectToAuth() {
+    if (isPublicPath()) return;
+    const next = encodeURIComponent(window.location.pathname + window.location.search);
+    window.location.href = `/auth?next=${next}`;
+  }
+
+  window.fetch = async (input, init = {}) => {
     const url = typeof input === 'string' ? input : input.url;
+    const parsedUrl = url ? new URL(url, window.location.origin) : null;
+    const isApiRequest = parsedUrl && parsedUrl.origin === window.location.origin && parsedUrl.pathname.startsWith('/api/');
     const token = getToken();
-    if (token && url && url.startsWith('/api/') && !url.startsWith('/api/auth/signin') && !url.startsWith('/api/auth/signup')) {
+    if (token && isApiRequest && !isAuthEndpoint(parsedUrl.pathname)) {
       const headers = new Headers(init.headers || {});
       headers.set('Authorization', `Bearer ${token}`);
       init.headers = headers;
     }
-    return nativeFetch(input, init);
+    const response = await nativeFetch(input, init);
+    if (response.status === 401 && isApiRequest && !isAuthEndpoint(parsedUrl.pathname)) {
+      clearSession();
+      redirectToAuth();
+    }
+    return response;
   };
 
   function renderAuthBar() {

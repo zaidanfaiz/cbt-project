@@ -141,7 +141,13 @@ async function requireAuth(req, res, next) {
     req.accessToken = token;
     next();
   } catch (error) {
-    sendError(res, error, 401);
+    const message = String(error && error.message ? error.message : error);
+    const isInvalidToken = /invalid token|jwt|expired|unauthorized/i.test(message);
+    sendError(
+      res,
+      new Error(isInvalidToken ? 'Sesi sudah kedaluwarsa. Silakan masuk ulang.' : message),
+      401,
+    );
   }
 }
 
