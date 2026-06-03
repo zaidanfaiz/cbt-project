@@ -1,0 +1,15 @@
+node_modules
+npm-debug.log*
+.env
+.env.*
+!.env.example
+database
+*.sqlite
+*.sqlite3
+*.db
+uploads
+.git
+.gitignore
+Dockerfile
+.DS_Store
+Thumbs.db

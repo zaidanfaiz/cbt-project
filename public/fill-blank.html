@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Fill-in-the-Blank | ZDNCH BELAJAR</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <script>
+      window.MathJax = {
+        tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] },
+        svg: { fontCache: 'global' }
+      };
+    </script>
+    <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+    <script defer src="/fill-blank.js"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/">ZDNCH BELAJAR</a>
+      <nav class="topnav" aria-label="Navigasi utama">
+        <a class="nav-link" href="/input-soal">Input Soal</a>
+        <a class="nav-link" href="/simulasi">Mulai Simulasi</a>
+      </nav>
+    </header>
+
+    <main class="module-shell">
+      <section class="page-heading">
+        <p class="section-label">Cloze Test</p>
+        <h1>Fill-in-the-Blank</h1>
+        <p>Isi rumpang langsung di dalam paragraf. Placeholder ditulis sebagai <code>[blank_1]</code>, <code>[blank_2]</code>, dan seterusnya di JSON.</p>
+      </section>
+
+      <section class="module-grid">
+        <aside class="panel">
+          <div class="section-heading">
+            <p class="section-label">Bulk Input</p>
+            <h2>Upload JSON Cloze</h2>
+          </div>
+          <form id="cloze-upload" class="stack-form">
+            <label>File JSON <input id="cloze-file" type="file" accept="application/json,.json" /></label>
+            <button class="button primary" type="submit">Import Cloze Test</button>
+            <p class="muted-text">Format: array atau { "tests": [...] } berisi <code>title</code>, <code>passage_html</code>, dan <code>blanks</code>. Blank bisa bertipe <code>dropdown</code> atau <code>text</code>.</p>
+            <p id="cloze-status" class="status-text"></p>
+          </form>
+        </aside>
+
+        <section class="panel module-player">
+          <div class="module-toolbar">
+            <span id="cloze-counter" class="count-pill">0 teks</span>
+            <button id="cloze-check" class="button primary" type="button">Cek Jawaban Paragraf</button>
+          </div>
+          <article class="cloze-card">
+            <h2 id="cloze-title">Belum ada data</h2>
+            <div id="cloze-passage" class="cloze-passage"></div>
+            <p id="cloze-feedback" class="status-text"></p>
+          </article>
+          <div class="exam-actions">
+            <button id="cloze-prev" class="button secondary" type="button">Sebelumnya</button>
+            <button id="cloze-next" class="button primary" type="button">Selanjutnya</button>
+          </div>
+        </section>
+      </section>
+    </main>
+  </body>
+</html>

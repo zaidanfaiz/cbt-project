@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Kerjakan Tes | ZDNCH BELAJAR</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <script>
+      window.MathJax = {
+        tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] },
+        svg: { fontCache: 'global' }
+      };
+    </script>
+    <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+    <script defer src="/tes.js"></script>
+  </head>
+  <body>
+    <header class="exam-topbar">
+      <div>
+        <a class="brand" href="/">ZDNCH BELAJAR</a>
+        <p id="exam-title" class="exam-title">Memuat subtes...</p>
+      </div>
+      <div class="exam-meta">
+        <div class="timer-box" aria-live="polite">
+          <span>Sisa Waktu</span>
+          <strong id="timer">00:00</strong>
+        </div>
+        <button id="submit-test" class="button danger" type="button">Kumpulkan</button>
+      </div>
+    </header>
+
+    <main class="exam-layout">
+      <section class="question-stage">
+        <div class="question-toolbar">
+          <div>
+            <p id="question-progress" class="section-label">Soal 0 dari 0</p>
+            <h1 id="question-heading">Soal</h1>
+          </div>
+          <button id="flag-question" class="button warning" type="button">Ragu-ragu</button>
+        </div>
+
+        <article class="question-card">
+          <div id="question-text" class="question-text"></div>
+          <div id="answer-options" class="answer-options" role="radiogroup" aria-label="Pilihan jawaban"></div>
+        </article>
+
+        <div class="exam-actions">
+          <button id="previous-question" class="button secondary" type="button">Sebelumnya</button>
+          <button id="flag-question-bottom" class="button warning" type="button">Ragu-ragu</button>
+          <button id="next-question" class="button primary" type="button">Selanjutnya</button>
+        </div>
+      </section>
+
+      <aside class="palette-panel">
+        <div class="section-heading">
+          <p class="section-label">Navigasi Soal</p>
+          <h2>Daftar nomor</h2>
+        </div>
+        <div class="palette-legend">
+          <span><i class="legend blank"></i>Belum dijawab</span>
+          <span><i class="legend answered"></i>Sudah dijawab</span>
+          <span><i class="legend flagged"></i>Ragu-ragu</span>
+        </div>
+        <div id="question-palette" class="question-palette"></div>
+      </aside>
+    </main>
+  </body>
+</html>

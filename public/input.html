@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Input Soal | ZDNCH BELAJAR</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <script>
+      window.MathJax = {
+        tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] },
+        svg: { fontCache: 'global' }
+      };
+    </script>
+    <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+    <script defer src="/input.js"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/">ZDNCH BELAJAR</a>
+      <nav class="topnav" aria-label="Navigasi utama">
+        <a class="nav-link active" href="/input-soal">Input Soal</a>
+        <a class="nav-link" href="/simulasi">Mulai Simulasi</a>
+      </nav>
+    </header>
+
+    <main class="admin-layout">
+      <section class="panel">
+        <div class="section-heading">
+          <p class="section-label">Bank Soal Pribadi</p>
+          <h1>Tambah soal sesuai struktur ujian</h1>
+          <p class="muted-text">Pilih Subtes dan Materi, lalu tulis soal, opsi, jawaban benar, dan pembahasan. Semua data tersimpan di InsForge PostgreSQL tanpa login atau role.</p>
+        </div>
+
+        <form id="question-form" class="stack-form">
+          <div class="form-row">
+            <label>
+              Subtes
+              <select name="subtest_key" required></select>
+            </label>
+            <label>
+              Materi
+              <select name="materi_key" required></select>
+            </label>
+          </div>
+          <label>
+            Teks soal
+            <textarea name="question_text" rows="5" placeholder="Tulis soal dan rumus LaTeX, contoh: $\\frac{2}{3}$" required></textarea>
+          </label>
+          <div class="options-grid">
+            <label>Opsi A <textarea name="option_a" rows="2" required></textarea></label>
+            <label>Opsi B <textarea name="option_b" rows="2" required></textarea></label>
+            <label>Opsi C <textarea name="option_c" rows="2" required></textarea></label>
+            <label>Opsi D <textarea name="option_d" rows="2" required></textarea></label>
+            <label>Opsi E <textarea name="option_e" rows="2" required></textarea></label>
+          </div>
+          <div class="form-row">
+            <label>
+              Jawaban benar
+              <select name="correct_answer" required>
+                <option value="A">A</option>
+                <option value="B">B</option>
+                <option value="C">C</option>
+                <option value="D">D</option>
+                <option value="E">E</option>
+              </select>
+            </label>
+            <label>
+              Poin
+              <input name="points" type="number" min="0" value="4" required />
+            </label>
+          </div>
+          <label>
+            Pembahasan
+            <textarea name="explanation" rows="4" placeholder="Opsional. Bisa memakai LaTeX."></textarea>
+          </label>
+          <div class="form-actions">
+            <button class="button secondary" id="preview-form-question" type="button">Preview Ujian</button>
+            <button class="button primary" type="submit">Simpan Soal</button>
+            <button class="button secondary" type="reset">Bersihkan</button>
+          </div>
+          <p id="question-status" class="status-text" role="status"></p>
+        </form>
+
+        <div class="divider"></div>
+
+        <div class="section-heading">
+          <p class="section-label">Bulk Input</p>
+          <h2>Upload File Soal JSON</h2>
+          <p class="muted-text">Unggah file JSON berisi array soal. Periksa dulu dengan preview sebelum import ke database.</p>
+        </div>
+        <form id="bulk-form" class="stack-form">
+          <label>
+            File JSON
+            <input id="bulk-file" name="bulk_file" type="file" accept="application/json,.json" />
+          </label>
+          <div class="form-actions">
+            <button class="button secondary" id="preview-bulk-question" type="button">Preview Ujian</button>
+            <button class="button primary" type="submit">Import JSON</button>
+          </div>
+          <p class="muted-text">Format item: <code>subtest_key</code>, <code>materi_key</code>, <code>question_text</code>, <code>option_a</code> sampai <code>option_e</code>, <code>correct_answer</code>, <code>points</code>, <code>explanation</code>.</p>
+          <p id="bulk-status" class="status-text" role="status"></p>
+        </form>
+
+        <div class="divider"></div>
+
+        <div class="section-heading">
+          <p class="section-label">Storage Gambar</p>
+          <h2>Upload Gambar ke InsForge</h2>
+          <p class="muted-text">Unggah gambar, lalu tempel tag HTML yang dihasilkan ke teks soal, opsi jawaban, flashcard, Adu Kata, atau Fill-in-the-Blank.</p>
+        </div>
+        <form id="storage-form" class="stack-form">
+          <label>
+            File gambar
+            <input id="storage-file" name="file" type="file" accept="image/*" />
+          </label>
+          <div class="form-actions">
+            <button class="button primary" type="submit">Upload Gambar</button>
+          </div>
+          <label>
+            Tag gambar siap pakai
+            <textarea id="storage-snippet" rows="3" readonly placeholder="Hasil upload akan muncul di sini."></textarea>
+          </label>
+          <p id="storage-status" class="status-text" role="status"></p>
+        </form>
+      </section>
+
+      <section class="panel">
+        <div class="section-heading inline">
+          <div>
+            <p class="section-label">Ringkasan</p>
+            <h2>Soal tersimpan</h2>
+          </div>
+          <span id="question-count" class="count-pill">0 soal</span>
+        </div>
+        <div id="catalog-summary" class="summary-list"></div>
+        <div id="question-list" class="question-list" aria-live="polite"></div>
+      </section>
+    </main>
+
+    <dialog id="preview-dialog" class="preview-dialog">
+      <div class="preview-modal">
+        <div class="preview-header">
+          <div>
+            <p class="section-label">Preview Ujian</p>
+            <h2 id="preview-title">Pratinjau Soal</h2>
+          </div>
+          <button class="button secondary" id="close-preview" type="button">Tutup</button>
+        </div>
+        <div class="exam-layout preview-exam-layout">
+          <section class="question-stage">
+            <div class="question-toolbar">
+              <div>
+                <p id="preview-progress" class="section-label">Soal 1 dari 1</p>
+                <h1 id="preview-heading">Soal 1</h1>
+              </div>
+              <button class="button warning" type="button">Ragu-ragu</button>
+            </div>
+            <article class="question-card">
+              <div id="preview-question-text" class="question-text"></div>
+              <div id="preview-answer-options" class="answer-options" role="radiogroup" aria-label="Preview pilihan jawaban"></div>
+            </article>
+            <div class="exam-actions">
+              <button id="preview-prev" class="button secondary" type="button">Sebelumnya</button>
+              <button class="button warning" type="button">Ragu-ragu</button>
+              <button id="preview-next" class="button primary" type="button">Selanjutnya</button>
+            </div>
+          </section>
+          <aside class="palette-panel">
+            <div class="section-heading">
+              <p class="section-label">Navigasi Soal</p>
+              <h2>Daftar nomor</h2>
+            </div>
+            <div id="preview-palette" class="question-palette"></div>
+          </aside>
+        </div>
+      </div>
+    </dialog>
+  </body>
+</html>

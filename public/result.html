@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Hasil & Pembahasan | ZDNCH BELAJAR</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <script>
+      window.MathJax = {
+        tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] },
+        svg: { fontCache: 'global' }
+      };
+    </script>
+    <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+    <script defer src="/result.js"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/">ZDNCH BELAJAR</a>
+      <nav class="topnav" aria-label="Navigasi utama">
+        <a class="nav-link" href="/input-soal">Input Soal</a>
+        <a class="nav-link" href="/simulasi">Mulai Simulasi</a>
+      </nav>
+    </header>
+
+    <main class="page-shell">
+      <section class="result-hero">
+        <p class="section-label">Hasil & Pembahasan</p>
+        <h1 id="result-title">Ringkasan nilai</h1>
+        <div id="score-summary" class="result-summary"></div>
+      </section>
+      <section id="review-list" class="review-list"></section>
+    </main>
+  </body>
+</html>

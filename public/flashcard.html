@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Flashcard | ZDNCH BELAJAR</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <script>
+      window.MathJax = {
+        tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] },
+        svg: { fontCache: 'global' }
+      };
+    </script>
+    <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+    <script defer src="/flashcard.js"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/">ZDNCH BELAJAR</a>
+      <nav class="topnav" aria-label="Navigasi utama">
+        <a class="nav-link" href="/input-soal">Input Soal</a>
+        <a class="nav-link" href="/simulasi">Mulai Simulasi</a>
+      </nav>
+    </header>
+
+    <main class="module-shell">
+      <section class="page-heading">
+        <p class="section-label">Sistem Hafalan</p>
+        <h1>Flashcard</h1>
+        <p>Klik kartu untuk membalik sisi depan dan belakang. Konten mendukung LaTeX, teks, dan tag gambar HTML.</p>
+      </section>
+
+      <section class="module-grid">
+        <aside class="panel">
+          <div class="section-heading">
+            <p class="section-label">Bulk Input</p>
+            <h2>Upload JSON Flashcard</h2>
+          </div>
+          <form id="flashcard-upload" class="stack-form">
+            <label>File JSON <input id="flashcard-file" type="file" accept="application/json,.json" /></label>
+            <button class="button primary" type="submit">Import Flashcard</button>
+            <p class="muted-text">Format: array atau { "flashcards": [...] } berisi <code>deck</code>, <code>front_content</code>, <code>back_content</code>.</p>
+            <p id="flashcard-status" class="status-text"></p>
+          </form>
+        </aside>
+
+        <section class="panel module-player">
+          <div class="module-toolbar">
+            <span id="flashcard-counter" class="count-pill">0 kartu</span>
+            <span id="flashcard-deck" class="count-pill">Deck</span>
+          </div>
+          <button id="flashcard-card" class="flashcard-card" type="button">
+            <span class="flashcard-face flashcard-front">
+              <small>Depan</small>
+              <span id="flashcard-front"></span>
+            </span>
+            <span class="flashcard-face flashcard-back">
+              <small>Belakang</small>
+              <span id="flashcard-back"></span>
+            </span>
+          </button>
+          <div class="exam-actions">
+            <button id="flashcard-prev" class="button secondary" type="button">Sebelumnya</button>
+            <button id="flashcard-flip" class="button warning" type="button">Balik Kartu</button>
+            <button id="flashcard-next" class="button primary" type="button">Selanjutnya</button>
+          </div>
+        </section>
+      </section>
+    </main>
+  </body>
+</html>

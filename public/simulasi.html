@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mulai Simulasi | ZDNCH BELAJAR</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <script defer src="/simulasi.js"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/">ZDNCH BELAJAR</a>
+      <nav class="topnav" aria-label="Navigasi utama">
+        <a class="nav-link" href="/input-soal">Input Soal</a>
+        <a class="nav-link active" href="/simulasi">Mulai Simulasi</a>
+      </nav>
+    </header>
+
+    <main class="page-shell">
+      <section class="page-heading">
+        <p class="section-label">Simulasi Try Out</p>
+        <h1>Pilih subtes yang ingin dikerjakan</h1>
+        <p>
+          Setiap subtes memiliki batas waktu masing-masing. Soal diambil dari
+          database lokal yang Anda isi sendiri.
+        </p>
+      </section>
+
+      <section id="subtest-list" class="subtest-grid" aria-live="polite"></section>
+      <section id="empty-state" class="empty-state" hidden>
+        <h2>Belum ada soal tersimpan</h2>
+        <p>Anda tetap dapat melihat daftar subtes. Masukkan soal melalui halaman Input Soal.</p>
+        <a class="button primary" href="/input-soal">Input Soal</a>
+      </section>
+    </main>
+  </body>
+</html>

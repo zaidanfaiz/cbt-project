@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Adu Kata | ZDNCH BELAJAR</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <script>
+      window.MathJax = {
+        tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] },
+        svg: { fontCache: 'global' }
+      };
+    </script>
+    <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+    <script defer src="/adu-kata.js"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/">ZDNCH BELAJAR</a>
+      <nav class="topnav" aria-label="Navigasi utama">
+        <a class="nav-link" href="/input-soal">Input Soal</a>
+        <a class="nav-link" href="/simulasi">Mulai Simulasi</a>
+      </nav>
+    </header>
+
+    <main class="module-shell">
+      <section class="page-heading">
+        <p class="section-label">TPA Verbal</p>
+        <h1>Adu Kata</h1>
+        <p>Kuis cepat sinonim, antonim, dan analogi kata. Setiap soal memiliki timer sendiri dari JSON.</p>
+      </section>
+
+      <section class="module-grid">
+        <aside class="panel">
+          <div class="section-heading">
+            <p class="section-label">Bulk Input</p>
+            <h2>Upload JSON Adu Kata</h2>
+          </div>
+          <form id="word-upload" class="stack-form">
+            <label>File JSON <input id="word-file" type="file" accept="application/json,.json" /></label>
+            <button class="button primary" type="submit">Import Adu Kata</button>
+            <p class="muted-text">Format item: <code>question_type</code> sinonim/antonim/analogi, <code>timer_seconds</code>, <code>prompt</code>, <code>options</code> 5 item, <code>correct_answer</code>.</p>
+            <p id="word-status" class="status-text"></p>
+          </form>
+        </aside>
+
+        <section class="panel module-player speed-player">
+          <div class="module-toolbar speed-toolbar">
+            <span id="word-counter" class="count-pill">0 soal</span>
+            <span id="word-type" class="count-pill">Jenis</span>
+            <span id="word-timer" class="speed-timer">00</span>
+          </div>
+          <article class="word-quiz-card">
+            <div id="word-prompt" class="question-text"></div>
+            <div id="word-options" class="word-options"></div>
+            <p id="word-feedback" class="status-text"></p>
+          </article>
+          <div class="exam-actions">
+            <button id="word-prev" class="button secondary" type="button">Sebelumnya</button>
+            <button id="word-next" class="button primary" type="button">Selanjutnya</button>
+          </div>
+        </section>
+      </section>
+    </main>
+  </body>
+</html>
