@@ -8,6 +8,7 @@ function dokployHeaders() {
 
   return {
     Authorization: `Bearer ${token}`,
+    'x-api-key': token,
     'Content-Type': 'application/json',
   };
 }
