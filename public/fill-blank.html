@@ -43,6 +43,24 @@
             <p class="muted-text">Format: array atau { "tests": [...] } berisi <code>title</code>, <code>passage_html</code>, dan <code>blanks</code>. Blank bisa bertipe <code>dropdown</code> atau <code>text</code>.</p>
             <p id="cloze-status" class="status-text"></p>
           </form>
+
+          <div class="divider"></div>
+          <div class="section-heading">
+            <p class="section-label">Edit</p>
+            <h2>Edit Teks Aktif</h2>
+          </div>
+          <form id="cloze-edit" class="stack-form">
+            <label>Judul <input name="title" type="text" required /></label>
+            <label>Paragraf <textarea name="passage_html" rows="6" required></textarea></label>
+            <label>Blanks JSON <textarea name="blanks_json" rows="8" required></textarea></label>
+            <div class="form-actions">
+              <button id="cloze-edit-load" class="button secondary" type="button">Edit Teks Ini</button>
+              <button id="cloze-edit-save" class="button primary" type="submit">Update Teks</button>
+              <button id="cloze-delete" class="delete-button" type="button">Hapus Teks Ini</button>
+            </div>
+            <p class="muted-text">Contoh blank: <code>{ "id": "blank_1", "type": "dropdown", "options": ["go", "goes"], "answer": "goes" }</code></p>
+            <p id="cloze-edit-status" class="status-text"></p>
+          </form>
         </aside>
 
         <section class="panel module-player">

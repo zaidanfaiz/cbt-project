@@ -210,6 +210,15 @@ async function dbInsert(table, values, clientOverride = null) {
   return normalizeRows(data);
 }
 
+async function dbUpdateById(table, id, values, clientOverride = null) {
+  const client = clientOverride || (await insforge());
+  const { data, error } = await client.database.from(table).update(values).eq('id', id).select();
+  if (error) throw error;
+  const rows = normalizeRows(data);
+  if (!rows.length) throw new Error('Data tidak ditemukan atau bukan milik akun ini.');
+  return rows[0];
+}
+
 async function dbDeleteById(table, id, clientOverride = null) {
   const client = clientOverride || (await insforge());
   const { error } = await client.database.from(table).delete().eq('id', id);
@@ -267,6 +276,18 @@ function validateFlashcard(card) {
   return null;
 }
 
+function normalizeFlashcardPayload(card) {
+  return {
+    deck: String(card.deck || '').trim(),
+    front_content: String(card.front_content || '').trim(),
+    back_content: String(card.back_content || '').trim(),
+    attachment_url: String(card.attachment_url || '').trim(),
+    attachment_key: String(card.attachment_key || '').trim(),
+    attachment_name: String(card.attachment_name || '').trim(),
+    attachment_mime: String(card.attachment_mime || '').trim(),
+  };
+}
+
 function validateWordQuiz(item) {
   const type = String(item.question_type || '').trim().toLowerCase();
   const options = Array.isArray(item.options) ? item.options : [];
@@ -278,6 +299,22 @@ function validateWordQuiz(item) {
   if (!options.includes(item.correct_answer)) return 'Jawaban benar harus sama persis dengan salah satu opsi.';
   if (!Number.isInteger(timerSeconds) || timerSeconds <= 0) return 'Timer per soal harus berupa angka detik lebih dari 0.';
   return null;
+}
+
+function normalizeWordQuizPayload(item) {
+  return {
+    category: String(item.category || '').trim(),
+    question_type: String(item.question_type || '').trim().toLowerCase(),
+    prompt: String(item.prompt || '').trim(),
+    options_json: Array.isArray(item.options) ? item.options : parseJsonColumn(item.options_json, []),
+    correct_answer: String(item.correct_answer || '').trim(),
+    explanation: String(item.explanation || '').trim(),
+    timer_seconds: Number(item.timer_seconds ?? 20),
+    attachment_url: String(item.attachment_url || '').trim(),
+    attachment_key: String(item.attachment_key || '').trim(),
+    attachment_name: String(item.attachment_name || '').trim(),
+    attachment_mime: String(item.attachment_mime || '').trim(),
+  };
 }
 
 function validateClozeTest(item) {
@@ -296,6 +333,18 @@ function validateClozeTest(item) {
     }
   }
   return null;
+}
+
+function normalizeClozePayload(item) {
+  return {
+    title: String(item.title || '').trim(),
+    passage_html: String(item.passage_html || '').trim(),
+    blanks_json: Array.isArray(item.blanks) ? item.blanks : parseJsonColumn(item.blanks_json, []),
+    attachment_url: String(item.attachment_url || '').trim(),
+    attachment_key: String(item.attachment_key || '').trim(),
+    attachment_name: String(item.attachment_name || '').trim(),
+    attachment_mime: String(item.attachment_mime || '').trim(),
+  };
 }
 
 async function questionCountsBySubtest(clientOverride = null) {
@@ -589,6 +638,22 @@ app.post('/api/questions', async (req, res) => {
   }
 });
 
+app.put('/api/questions/:id', async (req, res) => {
+  const payload = req.body || {};
+  const validationError = validateQuestion(payload);
+  if (validationError) {
+    res.status(400).json({ error: validationError });
+    return;
+  }
+
+  try {
+    const question = await dbUpdateById('questions', req.params.id, normalizeQuestionPayload(payload), req.insforge);
+    res.json({ question });
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
 app.post('/api/questions/bulk', async (req, res) => {
   const questions = asArrayPayload(req, 'questions');
   if (!questions || !questions.length) {
@@ -663,18 +728,34 @@ app.post('/api/flashcards/bulk', async (req, res) => {
   }
 
   try {
-    const rows = flashcards.map((card) => ({
-      deck: String(card.deck || '').trim(),
-      front_content: String(card.front_content).trim(),
-      back_content: String(card.back_content).trim(),
-      attachment_url: String(card.attachment_url || '').trim(),
-      attachment_key: String(card.attachment_key || '').trim(),
-      attachment_name: String(card.attachment_name || '').trim(),
-      attachment_mime: String(card.attachment_mime || '').trim(),
-      user_id: req.user.id,
-    }));
+    const rows = flashcards.map((card) => ({ ...normalizeFlashcardPayload(card), user_id: req.user.id }));
     const inserted = await dbInsert('flashcards', rows, req.insforge);
     res.status(201).json({ inserted_count: inserted.length });
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
+app.put('/api/flashcards/:id', async (req, res) => {
+  const payload = req.body || {};
+  const validationError = validateFlashcard(payload);
+  if (validationError) {
+    res.status(400).json({ error: validationError });
+    return;
+  }
+
+  try {
+    const flashcard = await dbUpdateById('flashcards', req.params.id, normalizeFlashcardPayload(payload), req.insforge);
+    res.json({ flashcard });
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
+app.delete('/api/flashcards/:id', async (req, res) => {
+  try {
+    await dbDeleteById('flashcards', req.params.id, req.insforge);
+    res.json({ ok: true });
   } catch (error) {
     sendError(res, error);
   }
@@ -705,22 +786,35 @@ app.post('/api/adu-kata/bulk', async (req, res) => {
   }
 
   try {
-    const rows = questions.map((item) => ({
-      category: String(item.category || '').trim(),
-      question_type: String(item.question_type).trim().toLowerCase(),
-      prompt: String(item.prompt).trim(),
-      options_json: item.options,
-      correct_answer: String(item.correct_answer).trim(),
-      explanation: String(item.explanation || '').trim(),
-      timer_seconds: Number(item.timer_seconds ?? 20),
-      attachment_url: String(item.attachment_url || '').trim(),
-      attachment_key: String(item.attachment_key || '').trim(),
-      attachment_name: String(item.attachment_name || '').trim(),
-      attachment_mime: String(item.attachment_mime || '').trim(),
-      user_id: req.user.id,
-    }));
+    const rows = questions.map((item) => ({ ...normalizeWordQuizPayload(item), user_id: req.user.id }));
     const inserted = await dbInsert('word_quizzes', rows, req.insforge);
     res.status(201).json({ inserted_count: inserted.length });
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
+app.put('/api/adu-kata/:id', async (req, res) => {
+  const payload = req.body || {};
+  const normalized = { ...payload, options: Array.isArray(payload.options) ? payload.options : parseJsonColumn(payload.options_json, []) };
+  const validationError = validateWordQuiz(normalized);
+  if (validationError) {
+    res.status(400).json({ error: validationError });
+    return;
+  }
+
+  try {
+    const question = await dbUpdateById('word_quizzes', req.params.id, normalizeWordQuizPayload(normalized), req.insforge);
+    res.json({ question: mapWordQuiz(question) });
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
+app.delete('/api/adu-kata/:id', async (req, res) => {
+  try {
+    await dbDeleteById('word_quizzes', req.params.id, req.insforge);
+    res.json({ ok: true });
   } catch (error) {
     sendError(res, error);
   }
@@ -752,18 +846,35 @@ app.post('/api/cloze/bulk', async (req, res) => {
   }
 
   try {
-    const rows = tests.map((item) => ({
-      title: String(item.title).trim(),
-      passage_html: String(item.passage_html).trim(),
-      blanks_json: item.blanks,
-      attachment_url: String(item.attachment_url || '').trim(),
-      attachment_key: String(item.attachment_key || '').trim(),
-      attachment_name: String(item.attachment_name || '').trim(),
-      attachment_mime: String(item.attachment_mime || '').trim(),
-      user_id: req.user.id,
-    }));
+    const rows = tests.map((item) => ({ ...normalizeClozePayload(item), user_id: req.user.id }));
     const inserted = await dbInsert('cloze_tests', rows, req.insforge);
     res.status(201).json({ inserted_count: inserted.length });
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
+app.put('/api/cloze/:id', async (req, res) => {
+  const payload = req.body || {};
+  const normalized = { ...payload, blanks: Array.isArray(payload.blanks) ? payload.blanks : parseJsonColumn(payload.blanks_json, []) };
+  const validationError = validateClozeTest(normalized);
+  if (validationError) {
+    res.status(400).json({ error: validationError });
+    return;
+  }
+
+  try {
+    const test = await dbUpdateById('cloze_tests', req.params.id, normalizeClozePayload(normalized), req.insforge);
+    res.json({ test: mapCloze(test) });
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
+app.delete('/api/cloze/:id', async (req, res) => {
+  try {
+    await dbDeleteById('cloze_tests', req.params.id, req.insforge);
+    res.json({ ok: true });
   } catch (error) {
     sendError(res, error);
   }

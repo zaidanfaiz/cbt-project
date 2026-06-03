@@ -43,6 +43,23 @@
             <p class="muted-text">Format: array atau { "flashcards": [...] } berisi <code>deck</code>, <code>front_content</code>, <code>back_content</code>.</p>
             <p id="flashcard-status" class="status-text"></p>
           </form>
+
+          <div class="divider"></div>
+          <div class="section-heading">
+            <p class="section-label">Edit</p>
+            <h2>Edit Kartu Aktif</h2>
+          </div>
+          <form id="flashcard-edit" class="stack-form">
+            <label>Deck <input name="deck" type="text" placeholder="Contoh: Grammar UTBK" /></label>
+            <label>Depan <textarea name="front_content" rows="4" required></textarea></label>
+            <label>Belakang <textarea name="back_content" rows="4" required></textarea></label>
+            <div class="form-actions">
+              <button id="flashcard-edit-load" class="button secondary" type="button">Edit Kartu Ini</button>
+              <button id="flashcard-edit-save" class="button primary" type="submit">Update Kartu</button>
+              <button id="flashcard-delete" class="delete-button" type="button">Hapus Kartu Ini</button>
+            </div>
+            <p id="flashcard-edit-status" class="status-text"></p>
+          </form>
         </aside>
 
         <section class="panel module-player">

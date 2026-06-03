@@ -43,6 +43,33 @@
             <p class="muted-text">Format item: <code>question_type</code> sinonim/antonim/analogi, <code>timer_seconds</code>, <code>prompt</code>, <code>options</code> 5 item, <code>correct_answer</code>.</p>
             <p id="word-status" class="status-text"></p>
           </form>
+
+          <div class="divider"></div>
+          <div class="section-heading">
+            <p class="section-label">Edit</p>
+            <h2>Edit Soal Aktif</h2>
+          </div>
+          <form id="word-edit" class="stack-form">
+            <label>Kategori <input name="category" type="text" placeholder="Opsional" /></label>
+            <label>Jenis
+              <select name="question_type" required>
+                <option value="sinonim">Sinonim</option>
+                <option value="antonim">Antonim</option>
+                <option value="analogi">Analogi Kata</option>
+              </select>
+            </label>
+            <label>Timer detik <input name="timer_seconds" type="number" min="1" value="20" required /></label>
+            <label>Prompt <textarea name="prompt" rows="4" required></textarea></label>
+            <label>Opsi jawaban <textarea name="options_text" rows="5" placeholder="Tulis 5 opsi, satu opsi per baris" required></textarea></label>
+            <label>Jawaban benar <input name="correct_answer" type="text" required /></label>
+            <label>Pembahasan <textarea name="explanation" rows="3"></textarea></label>
+            <div class="form-actions">
+              <button id="word-edit-load" class="button secondary" type="button">Edit Soal Ini</button>
+              <button id="word-edit-save" class="button primary" type="submit">Update Soal</button>
+              <button id="word-delete" class="delete-button" type="button">Hapus Soal Ini</button>
+            </div>
+            <p id="word-edit-status" class="status-text"></p>
+          </form>
         </aside>
 
         <section class="panel module-player speed-player">

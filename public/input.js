@@ -6,6 +6,7 @@ const questionAttachmentPreview = document.querySelector('#question-attachment-p
 const questionStatus = document.querySelector('#question-status');
 const bulkStatus = document.querySelector('#bulk-status');
 const storageStatus = document.querySelector('#storage-status');
+const questionSubmitButton = questionForm.querySelector('button[type="submit"]');
 const subtestSelect = questionForm.elements.subtest_key;
 const materiSelect = questionForm.elements.materi_key;
 const catalogSummary = document.querySelector('#catalog-summary');
@@ -29,6 +30,7 @@ let questions = [];
 let previewQuestions = [];
 let previewIndex = 0;
 let activeUploadTarget = null;
+let editingQuestionId = null;
 
 function attachmentMarkup(record) {
   if (!record || !record.attachment_url) return '';
@@ -54,6 +56,41 @@ function setQuestionAttachment(file) {
     attachment_name: questionForm.elements.attachment_name.value,
     attachment_mime: questionForm.elements.attachment_mime.value,
   });
+}
+
+function setQuestionFormMode(question = null) {
+  editingQuestionId = question && question.id ? question.id : null;
+  questionSubmitButton.textContent = editingQuestionId ? 'Update Soal' : 'Simpan Soal';
+  if (!editingQuestionId) return;
+
+  questionForm.subtest_key.value = question.subtest_key;
+  renderMateriOptions();
+  for (const field of [
+    'materi_key',
+    'question_text',
+    'option_a',
+    'option_b',
+    'option_c',
+    'option_d',
+    'option_e',
+    'correct_answer',
+    'points',
+    'explanation',
+    'attachment_url',
+    'attachment_key',
+    'attachment_name',
+    'attachment_mime',
+  ]) {
+    questionForm.elements[field].value = question[field] || '';
+  }
+  questionForm.points.value = Number(question.points || 4);
+  setQuestionAttachment({
+    url: question.attachment_url,
+    key: question.attachment_key,
+    name: question.attachment_name,
+    mimeType: question.attachment_mime,
+  });
+  questionForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function uploadSnippet(file, uploaded) {
@@ -176,7 +213,10 @@ function renderQuestions() {
             <article class="question-preview">
               <div class="question-preview-header">
                 <span class="question-preview-title">${index + 1}. ${question.subtest_name} - ${question.materi_name} - ${question.points} poin</span>
-                <button class="delete-button" data-question-id="${question.id}" type="button">Hapus</button>
+                <span class="item-actions">
+                  <button class="button secondary compact" data-edit-question-id="${question.id}" type="button">Edit</button>
+                  <button class="delete-button" data-delete-question-id="${question.id}" type="button">Hapus</button>
+                </span>
               </div>
               <div>${question.question_text}</div>
               ${attachmentMarkup(question)}
@@ -314,8 +354,9 @@ questionForm.addEventListener('submit', async (event) => {
   const payload = payloadFromForm();
 
   try {
-    await fetchJson('/api/questions', {
-      method: 'POST',
+    const wasEditing = Boolean(editingQuestionId);
+    await fetchJson(editingQuestionId ? `/api/questions/${editingQuestionId}` : '/api/questions', {
+      method: editingQuestionId ? 'PUT' : 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
@@ -327,7 +368,8 @@ questionForm.addEventListener('submit', async (event) => {
     questionForm.subtest_key.value = currentSubtest;
     renderMateriOptions();
     questionForm.materi_key.value = currentMateri;
-    setStatus(questionStatus, 'Soal berhasil disimpan.');
+    setQuestionFormMode(null);
+    setStatus(questionStatus, wasEditing ? 'Soal berhasil diperbarui.' : 'Soal berhasil disimpan.');
     await loadData();
   } catch (error) {
     setStatus(questionStatus, error.message, true);
@@ -424,13 +466,33 @@ previewPalette.addEventListener('click', (event) => {
   renderPreview();
 });
 
+questionForm.addEventListener('reset', () => {
+  setTimeout(() => {
+    questionForm.points.value = 4;
+    setQuestionAttachment({});
+    setQuestionFormMode(null);
+    renderMateriOptions();
+  });
+});
+
 questionList.addEventListener('click', async (event) => {
-  const button = event.target.closest('[data-question-id]');
+  const editButton = event.target.closest('[data-edit-question-id]');
+  if (editButton) {
+    const question = questions.find((item) => String(item.id) === String(editButton.dataset.editQuestionId));
+    if (question) {
+      setQuestionFormMode(question);
+      setStatus(questionStatus, 'Mode edit aktif. Ubah data lalu klik Update Soal.');
+    }
+    return;
+  }
+
+  const button = event.target.closest('[data-delete-question-id]');
   if (!button) return;
   if (!confirm('Hapus soal ini?')) return;
 
   try {
-    await fetchJson(`/api/questions/${button.dataset.questionId}`, { method: 'DELETE' });
+    await fetchJson(`/api/questions/${button.dataset.deleteQuestionId}`, { method: 'DELETE' });
+    if (String(editingQuestionId) === String(button.dataset.deleteQuestionId)) setQuestionFormMode(null);
     await loadData();
   } catch (error) {
     setStatus(questionStatus, error.message, true);

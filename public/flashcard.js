@@ -9,9 +9,15 @@ const backEl = document.querySelector('#flashcard-back');
 const prevButton = document.querySelector('#flashcard-prev');
 const nextButton = document.querySelector('#flashcard-next');
 const flipButton = document.querySelector('#flashcard-flip');
+const editForm = document.querySelector('#flashcard-edit');
+const editLoadButton = document.querySelector('#flashcard-edit-load');
+const editSaveButton = document.querySelector('#flashcard-edit-save');
+const deleteButton = document.querySelector('#flashcard-delete');
+const editStatusEl = document.querySelector('#flashcard-edit-status');
 
 let flashcards = [];
 let currentIndex = 0;
+let editingId = null;
 
 function renderMath() {
   if (window.MathJax && window.MathJax.typesetPromise) window.MathJax.typesetPromise();
@@ -20,6 +26,11 @@ function renderMath() {
 function setStatus(message, isError = false) {
   statusEl.textContent = message;
   statusEl.classList.toggle('error', isError);
+}
+
+function setEditStatus(message, isError = false) {
+  editStatusEl.textContent = message;
+  editStatusEl.classList.toggle('error', isError);
 }
 
 function attachmentMarkup(card) {
@@ -66,6 +77,9 @@ function renderCard() {
     backEl.innerHTML = 'Belum ada data.';
     prevButton.disabled = true;
     nextButton.disabled = true;
+    editLoadButton.disabled = true;
+    editSaveButton.disabled = true;
+    deleteButton.disabled = true;
     return;
   }
   counterEl.textContent = `${currentIndex + 1} dari ${flashcards.length}`;
@@ -74,7 +88,21 @@ function renderCard() {
   backEl.innerHTML = card.back_content;
   prevButton.disabled = currentIndex === 0;
   nextButton.disabled = currentIndex === flashcards.length - 1;
+  editLoadButton.disabled = false;
+  editSaveButton.disabled = !editingId;
+  deleteButton.disabled = false;
   renderMath();
+}
+
+function loadActiveCardIntoForm() {
+  const card = flashcards[currentIndex];
+  if (!card) return;
+  editingId = card.id;
+  editForm.elements.deck.value = card.deck || '';
+  editForm.elements.front_content.value = card.front_content || '';
+  editForm.elements.back_content.value = card.back_content || '';
+  editSaveButton.disabled = false;
+  setEditStatus('Mode edit aktif. Ubah data lalu klik Update Kartu.');
 }
 
 async function loadFlashcards() {
@@ -114,6 +142,54 @@ prevButton.addEventListener('click', () => {
 nextButton.addEventListener('click', () => {
   currentIndex = Math.min(flashcards.length - 1, currentIndex + 1);
   renderCard();
+});
+
+editLoadButton.addEventListener('click', loadActiveCardIntoForm);
+
+editForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  if (!editingId) {
+    setEditStatus('Klik Edit Kartu Ini terlebih dahulu.', true);
+    return;
+  }
+
+  try {
+    const payload = Object.fromEntries(new FormData(editForm).entries());
+    const response = await fetch(`/api/flashcards/${editingId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Update flashcard gagal.');
+    const updated = data.flashcard;
+    flashcards = flashcards.map((card) => (String(card.id) === String(updated.id) ? updated : card));
+    renderCard();
+    setEditStatus('Flashcard berhasil diperbarui.');
+  } catch (error) {
+    setEditStatus(error.message, true);
+  }
+});
+
+deleteButton.addEventListener('click', async () => {
+  const card = flashcards[currentIndex];
+  if (!card || !confirm('Hapus flashcard ini?')) return;
+
+  try {
+    const response = await fetch(`/api/flashcards/${card.id}`, { method: 'DELETE' });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Hapus flashcard gagal.');
+    flashcards = flashcards.filter((item) => String(item.id) !== String(card.id));
+    currentIndex = Math.min(currentIndex, Math.max(0, flashcards.length - 1));
+    if (String(editingId) === String(card.id)) {
+      editingId = null;
+      editForm.reset();
+    }
+    renderCard();
+    setEditStatus('Flashcard berhasil dihapus.');
+  } catch (error) {
+    setEditStatus(error.message, true);
+  }
 });
 
 loadFlashcards().catch((error) => setStatus(error.message, true));

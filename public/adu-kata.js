@@ -9,12 +9,18 @@ const optionsEl = document.querySelector('#word-options');
 const feedbackEl = document.querySelector('#word-feedback');
 const prevButton = document.querySelector('#word-prev');
 const nextButton = document.querySelector('#word-next');
+const editForm = document.querySelector('#word-edit');
+const editLoadButton = document.querySelector('#word-edit-load');
+const editSaveButton = document.querySelector('#word-edit-save');
+const deleteButton = document.querySelector('#word-delete');
+const editStatusEl = document.querySelector('#word-edit-status');
 
 let questions = [];
 let currentIndex = 0;
 let remaining = 0;
 let timerId = null;
 let locked = false;
+let editingId = null;
 
 function renderMath() {
   if (window.MathJax && window.MathJax.typesetPromise) window.MathJax.typesetPromise();
@@ -23,6 +29,11 @@ function renderMath() {
 function setStatus(message, isError = false) {
   statusEl.textContent = message;
   statusEl.classList.toggle('error', isError);
+}
+
+function setEditStatus(message, isError = false) {
+  editStatusEl.textContent = message;
+  editStatusEl.classList.toggle('error', isError);
 }
 
 function readJsonFile(input) {
@@ -90,6 +101,9 @@ function renderQuestion() {
     optionsEl.innerHTML = '';
     prevButton.disabled = true;
     nextButton.disabled = true;
+    editLoadButton.disabled = true;
+    editSaveButton.disabled = true;
+    deleteButton.disabled = true;
     return;
   }
 
@@ -101,8 +115,38 @@ function renderQuestion() {
     .join('');
   prevButton.disabled = currentIndex === 0;
   nextButton.disabled = currentIndex === questions.length - 1;
+  editLoadButton.disabled = false;
+  editSaveButton.disabled = !editingId;
+  deleteButton.disabled = false;
   renderMath();
   startTimer();
+}
+
+function loadActiveQuestionIntoForm() {
+  const question = questions[currentIndex];
+  if (!question) return;
+  stopTimer();
+  editingId = question.id;
+  editForm.elements.category.value = question.category || '';
+  editForm.elements.question_type.value = question.question_type || 'sinonim';
+  editForm.elements.timer_seconds.value = Number(question.timer_seconds || 20);
+  editForm.elements.prompt.value = question.prompt || '';
+  editForm.elements.options_text.value = (question.options || []).join('\n');
+  editForm.elements.correct_answer.value = question.correct_answer || '';
+  editForm.elements.explanation.value = question.explanation || '';
+  editSaveButton.disabled = false;
+  setEditStatus('Mode edit aktif. Ubah data lalu klik Update Soal.');
+}
+
+function payloadFromEditForm() {
+  const payload = Object.fromEntries(new FormData(editForm).entries());
+  payload.timer_seconds = Number(payload.timer_seconds || 20);
+  payload.options = String(payload.options_text || '')
+    .split(/\r?\n/)
+    .map((option) => option.trim())
+    .filter(Boolean);
+  delete payload.options_text;
+  return payload;
 }
 
 function goNextAfterDelay(delay = 850) {
@@ -194,6 +238,53 @@ prevButton.addEventListener('click', () => {
 nextButton.addEventListener('click', () => {
   currentIndex = Math.min(questions.length - 1, currentIndex + 1);
   renderQuestion();
+});
+
+editLoadButton.addEventListener('click', loadActiveQuestionIntoForm);
+
+editForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  if (!editingId) {
+    setEditStatus('Klik Edit Soal Ini terlebih dahulu.', true);
+    return;
+  }
+
+  try {
+    const response = await fetch(`/api/adu-kata/${editingId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payloadFromEditForm()),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Update Adu Kata gagal.');
+    const updated = data.question;
+    questions = questions.map((question) => (String(question.id) === String(updated.id) ? updated : question));
+    renderQuestion();
+    setEditStatus('Soal Adu Kata berhasil diperbarui.');
+  } catch (error) {
+    setEditStatus(error.message, true);
+  }
+});
+
+deleteButton.addEventListener('click', async () => {
+  const question = questions[currentIndex];
+  if (!question || !confirm('Hapus soal Adu Kata ini?')) return;
+
+  try {
+    const response = await fetch(`/api/adu-kata/${question.id}`, { method: 'DELETE' });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Hapus Adu Kata gagal.');
+    questions = questions.filter((item) => String(item.id) !== String(question.id));
+    currentIndex = Math.min(currentIndex, Math.max(0, questions.length - 1));
+    if (String(editingId) === String(question.id)) {
+      editingId = null;
+      editForm.reset();
+    }
+    renderQuestion();
+    setEditStatus('Soal Adu Kata berhasil dihapus.');
+  } catch (error) {
+    setEditStatus(error.message, true);
+  }
 });
 
 window.addEventListener('beforeunload', stopTimer);

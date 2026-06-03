@@ -8,9 +8,15 @@ const passageEl = document.querySelector('#cloze-passage');
 const feedbackEl = document.querySelector('#cloze-feedback');
 const prevButton = document.querySelector('#cloze-prev');
 const nextButton = document.querySelector('#cloze-next');
+const editForm = document.querySelector('#cloze-edit');
+const editLoadButton = document.querySelector('#cloze-edit-load');
+const editSaveButton = document.querySelector('#cloze-edit-save');
+const deleteButton = document.querySelector('#cloze-delete');
+const editStatusEl = document.querySelector('#cloze-edit-status');
 
 let tests = [];
 let currentIndex = 0;
+let editingId = null;
 
 function renderMath() {
   if (window.MathJax && window.MathJax.typesetPromise) window.MathJax.typesetPromise();
@@ -19,6 +25,11 @@ function renderMath() {
 function setStatus(message, isError = false) {
   statusEl.textContent = message;
   statusEl.classList.toggle('error', isError);
+}
+
+function setEditStatus(message, isError = false) {
+  editStatusEl.textContent = message;
+  editStatusEl.classList.toggle('error', isError);
 }
 
 function attachmentMarkup(test) {
@@ -97,6 +108,9 @@ function renderTest() {
     checkButton.disabled = true;
     prevButton.disabled = true;
     nextButton.disabled = true;
+    editLoadButton.disabled = true;
+    editSaveButton.disabled = true;
+    deleteButton.disabled = true;
     return;
   }
   counterEl.textContent = `${currentIndex + 1} dari ${tests.length}`;
@@ -105,7 +119,32 @@ function renderTest() {
   checkButton.disabled = false;
   prevButton.disabled = currentIndex === 0;
   nextButton.disabled = currentIndex === tests.length - 1;
+  editLoadButton.disabled = false;
+  editSaveButton.disabled = !editingId;
+  deleteButton.disabled = false;
   renderMath();
+}
+
+function loadActiveTestIntoForm() {
+  const test = tests[currentIndex];
+  if (!test) return;
+  editingId = test.id;
+  editForm.elements.title.value = test.title || '';
+  editForm.elements.passage_html.value = test.passage_html || '';
+  editForm.elements.blanks_json.value = JSON.stringify(test.blanks || [], null, 2);
+  editSaveButton.disabled = false;
+  setEditStatus('Mode edit aktif. Ubah data lalu klik Update Teks.');
+}
+
+function payloadFromEditForm() {
+  const payload = Object.fromEntries(new FormData(editForm).entries());
+  try {
+    payload.blanks = JSON.parse(payload.blanks_json || '[]');
+  } catch (_error) {
+    throw new Error('Blanks JSON tidak valid.');
+  }
+  delete payload.blanks_json;
+  return payload;
 }
 
 async function loadTests() {
@@ -208,6 +247,53 @@ prevButton.addEventListener('click', () => {
 nextButton.addEventListener('click', () => {
   currentIndex = Math.min(tests.length - 1, currentIndex + 1);
   renderTest();
+});
+
+editLoadButton.addEventListener('click', loadActiveTestIntoForm);
+
+editForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  if (!editingId) {
+    setEditStatus('Klik Edit Teks Ini terlebih dahulu.', true);
+    return;
+  }
+
+  try {
+    const response = await fetch(`/api/cloze/${editingId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payloadFromEditForm()),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Update Fill-in-the-Blank gagal.');
+    const updated = data.test;
+    tests = tests.map((test) => (String(test.id) === String(updated.id) ? updated : test));
+    renderTest();
+    setEditStatus('Fill-in-the-Blank berhasil diperbarui.');
+  } catch (error) {
+    setEditStatus(error.message, true);
+  }
+});
+
+deleteButton.addEventListener('click', async () => {
+  const test = tests[currentIndex];
+  if (!test || !confirm('Hapus Fill-in-the-Blank ini?')) return;
+
+  try {
+    const response = await fetch(`/api/cloze/${test.id}`, { method: 'DELETE' });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Hapus Fill-in-the-Blank gagal.');
+    tests = tests.filter((item) => String(item.id) !== String(test.id));
+    currentIndex = Math.min(currentIndex, Math.max(0, tests.length - 1));
+    if (String(editingId) === String(test.id)) {
+      editingId = null;
+      editForm.reset();
+    }
+    renderTest();
+    setEditStatus('Fill-in-the-Blank berhasil dihapus.');
+  } catch (error) {
+    setEditStatus(error.message, true);
+  }
 });
 
 loadTests().catch((error) => setStatus(error.message, true));
