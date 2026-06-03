@@ -58,7 +58,7 @@ Isi nilai rahasia secara lokal saja. Jangan commit `.env`.
 ```env
 NODE_ENV=production
 PORT=3000
-INSFORGE_BASE_URL=https://insforge.butuncloud.online
+INSFORGE_BASE_URL=https://acfzi5wy.ap-southeast.insforge.app
 INSFORGE_ANON_KEY=
 INSFORGE_STORAGE_BUCKET=uploads
 DOKPLOY_ADMIN_TOKEN=
@@ -131,7 +131,7 @@ Jika repository sudah pernah di-init, mulai dari `git add .`.
 ```env
 NODE_ENV=production
 PORT=3000
-INSFORGE_BASE_URL=https://insforge.butuncloud.online
+INSFORGE_BASE_URL=https://acfzi5wy.ap-southeast.insforge.app
 INSFORGE_ANON_KEY=<isi dari InsForge>
 INSFORGE_STORAGE_BUCKET=uploads
 DOKPLOY_ADMIN_TOKEN=<isi token admin Dokploy>
