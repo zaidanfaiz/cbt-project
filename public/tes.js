@@ -58,6 +58,17 @@ function renderMath() {
   }
 }
 
+function attachmentMarkup(question) {
+  if (!question || !question.attachment_url) return '';
+  const name = question.attachment_name || 'Lampiran';
+  const isImage = String(question.attachment_mime || '').startsWith('image/');
+  return `<div class="record-attachment">
+    <strong>Lampiran</strong>
+    ${isImage ? `<img src="${question.attachment_url}" alt="${name}">` : ''}
+    <a href="${question.attachment_url}" target="_blank" rel="noreferrer">${name}</a>
+  </div>`;
+}
+
 function currentQuestion() {
   return state.questions[state.currentIndex];
 }
@@ -119,7 +130,7 @@ function renderQuestion() {
 
   elements.progress.textContent = `Soal ${state.currentIndex + 1} dari ${state.questions.length}`;
   elements.heading.textContent = `Soal ${state.currentIndex + 1}`;
-  elements.questionText.innerHTML = `<p class="materi-chip">${question.materi_name}</p>${question.question_text}`;
+  elements.questionText.innerHTML = `<p class="materi-chip">${question.materi_name}</p>${question.question_text}${attachmentMarkup(question)}`;
   elements.options.innerHTML = optionMarkup(question);
 
   const flagged = Boolean(state.flagged[question.id]);

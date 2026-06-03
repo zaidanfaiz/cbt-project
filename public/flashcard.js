@@ -22,6 +22,17 @@ function setStatus(message, isError = false) {
   statusEl.classList.toggle('error', isError);
 }
 
+function attachmentMarkup(card) {
+  if (!card || !card.attachment_url) return '';
+  const name = card.attachment_name || 'Lampiran';
+  const isImage = String(card.attachment_mime || '').startsWith('image/');
+  return `<span class="record-attachment">
+    <strong>Lampiran</strong>
+    ${isImage ? `<img src="${card.attachment_url}" alt="${name}">` : ''}
+    <a href="${card.attachment_url}" target="_blank" rel="noreferrer">${name}</a>
+  </span>`;
+}
+
 function readJsonFile(input) {
   return new Promise((resolve, reject) => {
     const file = input.files && input.files[0];
@@ -59,7 +70,7 @@ function renderCard() {
   }
   counterEl.textContent = `${currentIndex + 1} dari ${flashcards.length}`;
   deckEl.textContent = card.deck || 'Tanpa deck';
-  frontEl.innerHTML = card.front_content;
+  frontEl.innerHTML = card.front_content + attachmentMarkup(card);
   backEl.innerHTML = card.back_content;
   prevButton.disabled = currentIndex === 0;
   nextButton.disabled = currentIndex === flashcards.length - 1;

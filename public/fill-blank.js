@@ -21,6 +21,17 @@ function setStatus(message, isError = false) {
   statusEl.classList.toggle('error', isError);
 }
 
+function attachmentMarkup(test) {
+  if (!test || !test.attachment_url) return '';
+  const name = test.attachment_name || 'Lampiran';
+  const isImage = String(test.attachment_mime || '').startsWith('image/');
+  return `<div class="record-attachment">
+    <strong>Lampiran</strong>
+    ${isImage ? `<img src="${test.attachment_url}" alt="${name}">` : ''}
+    <a href="${test.attachment_url}" target="_blank" rel="noreferrer">${name}</a>
+  </div>`;
+}
+
 function readJsonFile(input) {
   return new Promise((resolve, reject) => {
     const file = input.files && input.files[0];
@@ -83,7 +94,7 @@ function renderTest() {
   }
   counterEl.textContent = `${currentIndex + 1} dari ${tests.length}`;
   titleEl.textContent = test.title;
-  passageEl.innerHTML = renderPassage(test);
+  passageEl.innerHTML = renderPassage(test) + attachmentMarkup(test);
   checkButton.disabled = false;
   prevButton.disabled = currentIndex === 0;
   nextButton.disabled = currentIndex === tests.length - 1;

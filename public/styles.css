@@ -158,6 +158,11 @@ label {
   color: #fff;
 }
 
+.button.compact {
+  min-height: 34px;
+  padding: 0 12px;
+}
+
 .topbar,
 .exam-topbar {
   display: flex;
@@ -200,7 +205,8 @@ label {
 .topnav,
 .exam-meta,
 .form-actions,
-.exam-actions {
+.exam-actions,
+.auth-pill {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -221,6 +227,13 @@ label {
   color: var(--blue);
 }
 
+.auth-pill {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
 .page-shell {
   width: min(1180px, calc(100% - 40px));
   margin: 0 auto;
@@ -231,6 +244,43 @@ label {
   width: min(1280px, calc(100% - 40px));
   margin: 0 auto;
   padding: 34px 0 48px;
+}
+
+.auth-shell {
+  display: grid;
+  min-height: calc(100vh - 82px);
+  place-items: center;
+}
+
+.auth-panel {
+  width: min(460px, 100%);
+}
+
+.segmented-control {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #eef3f8;
+  padding: 5px;
+  margin-bottom: 18px;
+}
+
+.segmented-control button {
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-weight: 900;
+  min-height: 38px;
+}
+
+.segmented-control button.active {
+  background: #fff;
+  color: var(--blue);
+  box-shadow: 0 6px 16px rgba(7, 20, 47, 0.08);
 }
 
 .page-heading {
@@ -555,12 +605,30 @@ label {
 .question-text img,
 .preview-options img,
 .explanation-preview img,
-.review-card img {
+.review-card img,
+.record-attachment img {
   display: block;
   max-width: 100%;
   height: auto;
   border-radius: var(--radius);
   margin: 12px 0;
+}
+
+.record-attachment {
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #fff;
+  color: var(--muted);
+  margin-top: 14px;
+  padding: 12px;
+}
+
+.record-attachment a {
+  color: var(--blue);
+  font-weight: 850;
+  overflow-wrap: anywhere;
 }
 
 .materi-chip {

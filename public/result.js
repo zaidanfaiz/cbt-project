@@ -19,6 +19,17 @@ function statusLabel(status) {
   return 'Kosong';
 }
 
+function attachmentMarkup(detail) {
+  if (!detail || !detail.attachment_url) return '';
+  const name = detail.attachment_name || 'Lampiran';
+  const isImage = String(detail.attachment_mime || '').startsWith('image/');
+  return `<div class="record-attachment">
+    <strong>Lampiran</strong>
+    ${isImage ? `<img src="${detail.attachment_url}" alt="${name}">` : ''}
+    <a href="${detail.attachment_url}" target="_blank" rel="noreferrer">${name}</a>
+  </div>`;
+}
+
 function renderResult(result) {
   titleEl.textContent = `${result.subtest.name} selesai dikerjakan`;
   summaryEl.innerHTML = [
@@ -42,7 +53,7 @@ function renderResult(result) {
               <h2>${statusLabel(detail.status)} · ${detail.points} poin</h2>
             </div>
           </div>
-          <div class="question-text">${detail.question_text}</div>
+          <div class="question-text">${detail.question_text}${attachmentMarkup(detail)}</div>
           <div class="review-answers">
             <div>
               <span>Jawaban Anda</span>

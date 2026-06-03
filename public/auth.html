@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Masuk | ZDNCH BELAJAR</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <script defer src="/session.js"></script>
+    <script type="module" src="/auth.js"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/">ZDNCH BELAJAR</a>
+    </header>
+
+    <main class="page-shell auth-shell">
+      <section class="panel auth-panel">
+        <div class="section-heading">
+          <p class="section-label">Akun Belajar</p>
+          <h1>Masuk untuk mengakses data pribadi Anda.</h1>
+          <p class="muted-text">Semua soal, flashcard, file, dan hasil latihan akan terikat ke akun yang sedang masuk.</p>
+        </div>
+
+        <div class="segmented-control">
+          <button class="active" type="button" data-auth-mode="signin">Masuk</button>
+          <button type="button" data-auth-mode="signup">Daftar</button>
+        </div>
+
+        <form id="auth-form" class="stack-form">
+          <label id="auth-name-row" hidden>
+            Nama
+            <input id="auth-name" type="text" autocomplete="name" />
+          </label>
+          <label>
+            Email
+            <input id="auth-email" type="email" autocomplete="email" required />
+          </label>
+          <label>
+            Kata sandi
+            <input id="auth-password" type="password" autocomplete="current-password" minlength="6" required />
+          </label>
+          <button id="auth-submit" class="button primary" type="submit">Masuk</button>
+          <button id="auth-google" class="button secondary" type="button">Masuk dengan Google</button>
+          <p id="auth-status" class="status-text" role="status"></p>
+        </form>
+      </section>
+    </main>
+  </body>
+</html>

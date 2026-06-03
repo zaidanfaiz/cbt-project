@@ -9,6 +9,16 @@ const PORT = process.env.PORT || 3000;
 const INSFORGE_BASE_URL = process.env.INSFORGE_BASE_URL || 'https://insforge.butuncloud.online';
 const INSFORGE_ANON_KEY = process.env.INSFORGE_ANON_KEY;
 const STORAGE_BUCKET = process.env.INSFORGE_STORAGE_BUCKET || 'uploads';
+const AUTH_REQUIRED_PATHS = [
+  '/api/catalog',
+  '/api/subtests',
+  '/api/questions',
+  '/api/storage',
+  '/api/flashcards',
+  '/api/adu-kata',
+  '/api/cloze',
+  '/api/submit',
+];
 
 const EXAM_CATALOG = [
   {
@@ -65,6 +75,7 @@ let insforgeClientPromise;
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
+app.use('/vendor/insforge-sdk', express.static(path.join(__dirname, 'node_modules', '@insforge', 'sdk', 'dist')));
 
 async function insforge() {
   if (!INSFORGE_ANON_KEY) {
@@ -80,6 +91,57 @@ async function insforge() {
   }
   return insforgeClientPromise;
 }
+
+async function createInsforgeClient(accessToken = null) {
+  if (!INSFORGE_ANON_KEY) {
+    throw new Error('INSFORGE_ANON_KEY belum diisi di environment variable.');
+  }
+  const { createClient } = await import('@insforge/sdk');
+  return createClient({
+    baseUrl: INSFORGE_BASE_URL,
+    anonKey: INSFORGE_ANON_KEY,
+    edgeFunctionToken: accessToken || undefined,
+  });
+}
+
+function bearerToken(req) {
+  const header = String(req.headers.authorization || '');
+  return header.startsWith('Bearer ') ? header.slice(7).trim() : '';
+}
+
+async function requireAuth(req, res, next) {
+  const token = bearerToken(req);
+  if (!token) {
+    res.status(401).json({ error: 'Anda harus masuk terlebih dahulu.' });
+    return;
+  }
+
+  try {
+    const client = await createInsforgeClient(token);
+    const { data, error } = await client.auth.getCurrentUser();
+    if (error) throw error;
+    const user = data && data.user;
+    if (!user || !user.id) {
+      res.status(401).json({ error: 'Sesi tidak valid. Silakan masuk ulang.' });
+      return;
+    }
+    req.insforge = client;
+    req.user = user;
+    req.accessToken = token;
+    next();
+  } catch (error) {
+    sendError(res, error, 401);
+  }
+}
+
+app.use((req, res, next) => {
+  const needsAuth = AUTH_REQUIRED_PATHS.some((pathPrefix) => req.path === pathPrefix || req.path.startsWith(`${pathPrefix}/`));
+  if (!needsAuth) {
+    next();
+    return;
+  }
+  requireAuth(req, res, next);
+});
 
 function sendError(res, error, status = 500) {
   res.status(status).json({ error: error.message || String(error) });
@@ -117,28 +179,28 @@ function normalizeRows(data) {
   return Array.isArray(data) ? data : [];
 }
 
-async function dbSelect(table, columns = '*') {
-  const client = await insforge();
+async function dbSelect(table, columns = '*', clientOverride = null) {
+  const client = clientOverride || (await insforge());
   const { data, error } = await client.database.from(table).select(columns).order('id', { ascending: true });
   if (error) throw error;
   return normalizeRows(data);
 }
 
-async function dbInsert(table, values) {
-  const client = await insforge();
+async function dbInsert(table, values, clientOverride = null) {
+  const client = clientOverride || (await insforge());
   const { data, error } = await client.database.from(table).insert(values).select();
   if (error) throw error;
   return normalizeRows(data);
 }
 
-async function dbDeleteById(table, id) {
-  const client = await insforge();
+async function dbDeleteById(table, id, clientOverride = null) {
+  const client = clientOverride || (await insforge());
   const { error } = await client.database.from(table).delete().eq('id', id);
   if (error) throw error;
 }
 
-async function dbFilterEq(table, column, value) {
-  const client = await insforge();
+async function dbFilterEq(table, column, value, clientOverride = null) {
+  const client = clientOverride || (await insforge());
   const { data, error } = await client.database.from(table).select('*').eq(column, value).order('id', { ascending: true });
   if (error) throw error;
   return normalizeRows(data);
@@ -175,6 +237,10 @@ function normalizeQuestionPayload(payload) {
     correct_answer: normalizeAnswer(payload.correct_answer),
     points: Number(payload.points ?? 4),
     explanation: String(payload.explanation || '').trim(),
+    attachment_url: String(payload.attachment_url || '').trim(),
+    attachment_key: String(payload.attachment_key || '').trim(),
+    attachment_name: String(payload.attachment_name || '').trim(),
+    attachment_mime: String(payload.attachment_mime || '').trim(),
   };
 }
 
@@ -215,8 +281,8 @@ function validateClozeTest(item) {
   return null;
 }
 
-async function questionCountsBySubtest() {
-  const questions = await dbSelect('questions', 'id, subtest_key');
+async function questionCountsBySubtest(clientOverride = null) {
+  const questions = await dbSelect('questions', 'id, subtest_key', clientOverride);
   return questions.reduce((acc, question) => {
     acc[question.subtest_key] = (acc[question.subtest_key] || 0) + 1;
     return acc;
@@ -235,6 +301,58 @@ function mapCloze(row) {
     ...row,
     blanks: parseJsonColumn(row.blanks_json, []),
   };
+}
+
+function sampleFlashcardsForUser(userId) {
+  return [
+    {
+      user_id: userId,
+      deck: 'Bahasa Inggris Dasar',
+      front_content: 'What is the meaning of <strong>although</strong>?',
+      back_content: '<strong>Although</strong> berarti <em>meskipun</em>. Contoh: Although it rained, we continued studying.',
+    },
+    {
+      user_id: userId,
+      deck: 'Grammar UTBK',
+      front_content: 'Complete the pattern: Subject + have/has + $V_3$ digunakan untuk tense apa?',
+      back_content: 'Pola tersebut digunakan untuk <strong>Present Perfect Tense</strong>.',
+    },
+  ];
+}
+
+function sampleClozeTestsForUser(userId) {
+  return [
+    {
+      user_id: userId,
+      title: 'English Cloze - Daily Routine',
+      passage_html: 'Every morning, Rani [blank_1] at 5 a.m. before she [blank_2] to school.',
+      blanks_json: [
+        { id: 'blank_1', type: 'dropdown', options: ['wake up', 'wakes up', 'waking up'], answer: 'wakes up' },
+        { id: 'blank_2', type: 'text', answer: 'goes' },
+      ],
+    },
+    {
+      user_id: userId,
+      title: 'English Cloze - Reading Context',
+      passage_html: 'The committee has [blank_1] the proposal because it [blank_2] clear evidence.',
+      blanks_json: [
+        { id: 'blank_1', type: 'dropdown', options: ['approved', 'approve', 'approving'], answer: 'approved' },
+        { id: 'blank_2', type: 'dropdown', options: ['contains', 'contain', 'containing'], answer: 'contains' },
+      ],
+    },
+  ];
+}
+
+async function seedSamplesForUser(client, userId) {
+  const flashcards = await dbSelect('flashcards', 'id', client);
+  if (!flashcards.length) {
+    await dbInsert('flashcards', sampleFlashcardsForUser(userId), client);
+  }
+
+  const clozeTests = await dbSelect('cloze_tests', 'id', client);
+  if (!clozeTests.length) {
+    await dbInsert('cloze_tests', sampleClozeTestsForUser(userId), client);
+  }
 }
 
 function safeFileName(name) {
@@ -267,9 +385,9 @@ function parseMultipartUpload(req) {
   });
 }
 
-app.get('/api/catalog', async (_req, res) => {
+app.get('/api/catalog', async (req, res) => {
   try {
-    const counts = await questionCountsBySubtest();
+    const counts = await questionCountsBySubtest(req.insforge);
     res.json({
       subtests: EXAM_CATALOG.map((subtest) => ({
         ...subtest,
@@ -281,9 +399,88 @@ app.get('/api/catalog', async (_req, res) => {
   }
 });
 
-app.get('/api/subtests', async (_req, res) => {
+app.get('/api/auth/config', async (_req, res) => {
   try {
-    const counts = await questionCountsBySubtest();
+    const client = await insforge();
+    const { data, error } = await client.auth.getPublicAuthConfig();
+    if (error) throw error;
+    res.json({ config: data, base_url: INSFORGE_BASE_URL, anon_key: INSFORGE_ANON_KEY });
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
+app.post('/api/auth/signup', async (req, res) => {
+  try {
+    const email = String((req.body && req.body.email) || '').trim();
+    const password = String((req.body && req.body.password) || '');
+    const name = String((req.body && req.body.name) || '').trim();
+    if (!email || !password) {
+      res.status(400).json({ error: 'Email dan kata sandi wajib diisi.' });
+      return;
+    }
+    const client = await createInsforgeClient();
+    const { data, error } = await client.auth.signUp({
+      email,
+      password,
+      name,
+      redirectTo: `${req.protocol}://${req.get('host')}/auth`,
+    });
+    if (error) throw error;
+    if (data && data.accessToken && data.user && data.user.id) {
+      const userClient = await createInsforgeClient(data.accessToken);
+      await seedSamplesForUser(userClient, data.user.id).catch(() => null);
+    }
+    res.status(201).json({ user: data && data.user, accessToken: data && data.accessToken });
+  } catch (error) {
+    sendError(res, error, 400);
+  }
+});
+
+app.post('/api/auth/signin', async (req, res) => {
+  try {
+    const email = String((req.body && req.body.email) || '').trim();
+    const password = String((req.body && req.body.password) || '');
+    if (!email || !password) {
+      res.status(400).json({ error: 'Email dan kata sandi wajib diisi.' });
+      return;
+    }
+    const client = await createInsforgeClient();
+    const { data, error } = await client.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+    res.json({ user: data && data.user, accessToken: data && data.accessToken });
+  } catch (error) {
+    sendError(res, error, 400);
+  }
+});
+
+app.post('/api/auth/google', async (req, res) => {
+  try {
+    const client = await createInsforgeClient();
+    const redirectTo = String((req.body && req.body.redirectTo) || `${req.protocol}://${req.get('host')}/auth`);
+    const { data, error } = await client.auth.signInWithOAuth('google', {
+      redirectTo,
+      skipBrowserRedirect: true,
+      additionalParams: { prompt: 'select_account' },
+    });
+    if (error) throw error;
+    res.json({ url: data && data.url });
+  } catch (error) {
+    sendError(res, error, 400);
+  }
+});
+
+app.get('/api/auth/me', requireAuth, async (req, res) => {
+  res.json({ user: req.user });
+});
+
+app.post('/api/auth/signout', async (_req, res) => {
+  res.json({ ok: true });
+});
+
+app.get('/api/subtests', async (req, res) => {
+  try {
+    const counts = await questionCountsBySubtest(req.insforge);
     res.json({
       subtests: EXAM_CATALOG.map((subtest) => ({
         key: subtest.key,
@@ -306,7 +503,7 @@ app.get('/api/questions', async (req, res) => {
       res.status(400).json({ error: 'Subtes tidak valid.' });
       return;
     }
-    const questions = subtestKey ? await dbFilterEq('questions', 'subtest_key', subtestKey) : await dbSelect('questions');
+    const questions = subtestKey ? await dbFilterEq('questions', 'subtest_key', subtestKey, req.insforge) : await dbSelect('questions', '*', req.insforge);
     res.json({ questions });
   } catch (error) {
     sendError(res, error);
@@ -322,7 +519,7 @@ app.post('/api/questions', async (req, res) => {
   }
 
   try {
-    const [question] = await dbInsert('questions', normalizeQuestionPayload(payload));
+    const [question] = await dbInsert('questions', { ...normalizeQuestionPayload(payload), user_id: req.user.id }, req.insforge);
     res.status(201).json({ question });
   } catch (error) {
     sendError(res, error);
@@ -345,7 +542,11 @@ app.post('/api/questions/bulk', async (req, res) => {
   }
 
   try {
-    const inserted = await dbInsert('questions', questions.map(normalizeQuestionPayload));
+    const inserted = await dbInsert(
+      'questions',
+      questions.map((question) => ({ ...normalizeQuestionPayload(question), user_id: req.user.id })),
+      req.insforge
+    );
     res.status(201).json({ inserted_count: inserted.length, questions: inserted });
   } catch (error) {
     sendError(res, error);
@@ -354,7 +555,7 @@ app.post('/api/questions/bulk', async (req, res) => {
 
 app.delete('/api/questions/:id', async (req, res) => {
   try {
-    await dbDeleteById('questions', req.params.id);
+    await dbDeleteById('questions', req.params.id, req.insforge);
     res.json({ ok: true });
   } catch (error) {
     sendError(res, error);
@@ -364,10 +565,9 @@ app.delete('/api/questions/:id', async (req, res) => {
 app.post('/api/storage/upload', async (req, res) => {
   try {
     const file = await parseMultipartUpload(req);
-    const objectKey = `images/${Date.now()}-${safeFileName(file.filename)}`;
+    const objectKey = `users/${req.user.id}/${Date.now()}-${safeFileName(file.filename)}`;
     const blob = new Blob([file.buffer], { type: file.mimeType });
-    const client = await insforge();
-    const { data, error } = await client.storage.from(STORAGE_BUCKET).upload(objectKey, blob);
+    const { data, error } = await req.insforge.storage.from(STORAGE_BUCKET).upload(objectKey, blob);
     if (error) throw error;
     res.status(201).json({ file: data });
   } catch (error) {
@@ -375,9 +575,9 @@ app.post('/api/storage/upload', async (req, res) => {
   }
 });
 
-app.get('/api/flashcards', async (_req, res) => {
+app.get('/api/flashcards', async (req, res) => {
   try {
-    res.json({ flashcards: await dbSelect('flashcards') });
+    res.json({ flashcards: await dbSelect('flashcards', '*', req.insforge) });
   } catch (error) {
     sendError(res, error);
   }
@@ -403,17 +603,22 @@ app.post('/api/flashcards/bulk', async (req, res) => {
       deck: String(card.deck || '').trim(),
       front_content: String(card.front_content).trim(),
       back_content: String(card.back_content).trim(),
+      attachment_url: String(card.attachment_url || '').trim(),
+      attachment_key: String(card.attachment_key || '').trim(),
+      attachment_name: String(card.attachment_name || '').trim(),
+      attachment_mime: String(card.attachment_mime || '').trim(),
+      user_id: req.user.id,
     }));
-    const inserted = await dbInsert('flashcards', rows);
+    const inserted = await dbInsert('flashcards', rows, req.insforge);
     res.status(201).json({ inserted_count: inserted.length });
   } catch (error) {
     sendError(res, error);
   }
 });
 
-app.get('/api/adu-kata', async (_req, res) => {
+app.get('/api/adu-kata', async (req, res) => {
   try {
-    const rows = await dbSelect('word_quizzes');
+    const rows = await dbSelect('word_quizzes', '*', req.insforge);
     res.json({ questions: rows.map(mapWordQuiz) });
   } catch (error) {
     sendError(res, error);
@@ -444,17 +649,22 @@ app.post('/api/adu-kata/bulk', async (req, res) => {
       correct_answer: String(item.correct_answer).trim(),
       explanation: String(item.explanation || '').trim(),
       timer_seconds: Number(item.timer_seconds ?? 20),
+      attachment_url: String(item.attachment_url || '').trim(),
+      attachment_key: String(item.attachment_key || '').trim(),
+      attachment_name: String(item.attachment_name || '').trim(),
+      attachment_mime: String(item.attachment_mime || '').trim(),
+      user_id: req.user.id,
     }));
-    const inserted = await dbInsert('word_quizzes', rows);
+    const inserted = await dbInsert('word_quizzes', rows, req.insforge);
     res.status(201).json({ inserted_count: inserted.length });
   } catch (error) {
     sendError(res, error);
   }
 });
 
-app.get('/api/cloze', async (_req, res) => {
+app.get('/api/cloze', async (req, res) => {
   try {
-    const rows = await dbSelect('cloze_tests');
+    const rows = await dbSelect('cloze_tests', '*', req.insforge);
     res.json({ tests: rows.map(mapCloze) });
   } catch (error) {
     sendError(res, error);
@@ -481,8 +691,13 @@ app.post('/api/cloze/bulk', async (req, res) => {
       title: String(item.title).trim(),
       passage_html: String(item.passage_html).trim(),
       blanks_json: item.blanks,
+      attachment_url: String(item.attachment_url || '').trim(),
+      attachment_key: String(item.attachment_key || '').trim(),
+      attachment_name: String(item.attachment_name || '').trim(),
+      attachment_mime: String(item.attachment_mime || '').trim(),
+      user_id: req.user.id,
     }));
-    const inserted = await dbInsert('cloze_tests', rows);
+    const inserted = await dbInsert('cloze_tests', rows, req.insforge);
     res.status(201).json({ inserted_count: inserted.length });
   } catch (error) {
     sendError(res, error);
@@ -501,7 +716,7 @@ app.post('/api/submit', async (req, res) => {
       return;
     }
 
-    const questions = await dbFilterEq('questions', 'subtest_key', subtestKey);
+    const questions = await dbFilterEq('questions', 'subtest_key', subtestKey, req.insforge);
     let correct = 0;
     let wrong = 0;
     let blank = 0;
@@ -546,10 +761,15 @@ app.post('/api/submit', async (req, res) => {
         status,
         points: earned,
         explanation: question.explanation || '',
+        attachment_url: question.attachment_url || '',
+        attachment_key: question.attachment_key || '',
+        attachment_name: question.attachment_name || '',
+        attachment_mime: question.attachment_mime || '',
       };
     });
 
     const [attempt] = await dbInsert('attempts', {
+      user_id: req.user.id,
       subtest_key: subtest.key,
       subtest_name: subtest.name,
       score,
@@ -558,19 +778,21 @@ app.post('/api/submit', async (req, res) => {
       blank_count: blank,
       total_questions: questions.length,
       duration_seconds: durationSeconds,
-    });
+    }, req.insforge);
 
     if (details.length) {
       await dbInsert(
         'attempt_answers',
         details.map((detail) => ({
           attempt_id: attempt.id,
+          user_id: req.user.id,
           question_id: detail.question_id,
           selected_answer: detail.selected,
           correct_answer: detail.correct_answer,
           status: detail.status,
           points: detail.points,
-        }))
+        })),
+        req.insforge
       );
     }
 
@@ -607,6 +829,10 @@ app.get(['/adu-kata', '/adu-kata.html'], (_req, res) => {
 
 app.get(['/fill-blank', '/fill-blank.html'], (_req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'fill-blank.html'));
+});
+
+app.get(['/auth', '/auth.html'], (_req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'auth.html'));
 });
 
 app.get(['/tes', '/tes.html'], (_req, res) => {

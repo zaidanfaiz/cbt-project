@@ -4,6 +4,7 @@ const bulkFile = document.querySelector('#bulk-file');
 const storageForm = document.querySelector('#storage-form');
 const storageFile = document.querySelector('#storage-file');
 const storageSnippet = document.querySelector('#storage-snippet');
+const questionAttachmentPreview = document.querySelector('#question-attachment-preview');
 const questionStatus = document.querySelector('#question-status');
 const bulkStatus = document.querySelector('#bulk-status');
 const storageStatus = document.querySelector('#storage-status');
@@ -29,6 +30,32 @@ let catalog = [];
 let questions = [];
 let previewQuestions = [];
 let previewIndex = 0;
+
+function attachmentMarkup(record) {
+  if (!record || !record.attachment_url) return '';
+  const name = record.attachment_name || 'Lampiran';
+  const isImage = String(record.attachment_mime || '').startsWith('image/');
+  return `
+    <div class="record-attachment">
+      <strong>Lampiran</strong>
+      ${isImage ? `<img src="${record.attachment_url}" alt="${name}">` : ''}
+      <a href="${record.attachment_url}" target="_blank" rel="noreferrer">${name}</a>
+    </div>
+  `;
+}
+
+function setQuestionAttachment(file) {
+  questionForm.elements.attachment_url.value = file.url || '';
+  questionForm.elements.attachment_key.value = file.key || '';
+  questionForm.elements.attachment_name.value = file.name || file.key || 'Lampiran';
+  questionForm.elements.attachment_mime.value = file.mimeType || file.mime_type || '';
+  questionAttachmentPreview.hidden = !file.url;
+  questionAttachmentPreview.innerHTML = attachmentMarkup({
+    attachment_url: file.url,
+    attachment_name: questionForm.elements.attachment_name.value,
+    attachment_mime: questionForm.elements.attachment_mime.value,
+  });
+}
 
 function setStatus(target, message, isError = false) {
   target.textContent = message;
@@ -105,6 +132,7 @@ function renderQuestions() {
                 <button class="delete-button" data-question-id="${question.id}" type="button">Hapus</button>
               </div>
               <div>${question.question_text}</div>
+              ${attachmentMarkup(question)}
               <div class="preview-options">${optionRows(question)}</div>
               ${question.explanation ? `<div class="explanation-preview"><strong>Pembahasan:</strong> ${question.explanation}</div>` : ''}
             </article>
@@ -195,6 +223,7 @@ function renderPreview() {
   previewProgress.textContent = `Soal ${previewIndex + 1} dari ${previewQuestions.length}`;
   previewHeading.textContent = `Soal ${previewIndex + 1}`;
   previewQuestionText.innerHTML = `<p class="materi-chip">${question.materi_name}</p>${question.question_text}`;
+  previewQuestionText.innerHTML += attachmentMarkup(question);
   previewOptions.innerHTML = previewOptionMarkup(question);
   previewPalette.innerHTML = previewQuestions
     .map((_, index) => `<button class="palette-button ${index === previewIndex ? 'current answered' : ''}" data-preview-index="${index}" type="button">${index + 1}</button>`)
@@ -247,6 +276,7 @@ questionForm.addEventListener('submit', async (event) => {
     const currentMateri = payload.materi_key;
     questionForm.reset();
     questionForm.points.value = 4;
+    setQuestionAttachment({});
     questionForm.subtest_key.value = currentSubtest;
     renderMateriOptions();
     questionForm.materi_key.value = currentMateri;
@@ -319,8 +349,13 @@ storageForm.addEventListener('submit', async (event) => {
     if (!response.ok) throw new Error(data.error || 'Upload gambar gagal.');
 
     const url = data.file && data.file.url;
-    storageSnippet.value = `<img src="${url}" alt="">`;
-    setStatus(storageStatus, 'Gambar berhasil diupload. Tempel tag di atas ke konten soal atau opsi.');
+    storageSnippet.value = file.type.startsWith('image/') ? `<img src="${url}" alt="">` : url;
+    setQuestionAttachment({
+      ...data.file,
+      name: file.name,
+      mimeType: file.type,
+    });
+    setStatus(storageStatus, 'File berhasil diupload dan dilampirkan ke soal manual berikutnya.');
   } catch (error) {
     setStatus(storageStatus, error.message, true);
   }

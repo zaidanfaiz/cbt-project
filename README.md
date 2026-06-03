@@ -7,9 +7,11 @@ Tidak ada integrasi AI, API AI, atau logika berbasis AI di dalam aplikasi. Datab
 ## Fitur Utama
 
 - UI penuh Bahasa Indonesia.
+- InsForge Auth: daftar/masuk email, Google OAuth, dan keluar akun.
 - Backend Express stateless, siap deploy ke Dokploy.
 - Database memakai InsForge PostgreSQL.
-- Gambar memakai InsForge Storage, bukan folder upload lokal.
+- File lampiran memakai InsForge Storage, bukan folder upload lokal.
+- Row Level Security membatasi data per `user_id`; user hanya bisa membaca/menulis datanya sendiri.
 - Soal, opsi, pembahasan, flashcard, Adu Kata, dan Fill-in-the-Blank mendukung LaTeX MathJax dan tag HTML gambar.
 - Input soal manual, bulk JSON, preview ujian, simulasi CBT 2 kolom, timer, navigasi warna, skor `+4/-1/0`, dan hasil pembahasan.
 - Modul tambahan: Flashcard, Adu Kata, dan Fill-in-the-Blank.
@@ -35,7 +37,7 @@ Buat tabel kosong dengan menjalankan SQL di:
 scripts/insforge-schema.sql
 ```
 
-File tersebut hanya membuat tabel. Tidak ada insert dummy data.
+File tersebut membuat tabel, kolom `user_id`, attachment metadata, RLS policies, dan sample awal Flashcard/Fill-in-the-Blank Bahasa Inggris untuk user pertama yang tersedia.
 
 Pastikan bucket storage dengan nama berikut tersedia di InsForge:
 
@@ -85,9 +87,25 @@ Buka:
 - Adu Kata: `http://localhost:3000/adu-kata`
 - Fill-in-the-Blank: `http://localhost:3000/fill-blank`
 
-## Upload Gambar
+## Autentikasi
 
-Di halaman `Input Soal`, gunakan panel `Upload Gambar ke InsForge`.
+Buka:
+
+```text
+http://localhost:3000/auth
+```
+
+Fitur yang tersedia:
+
+- Daftar/Masuk email dan kata sandi.
+- Masuk dengan Google OAuth.
+- Keluar akun dari tombol `Keluar` di topbar.
+
+Semua endpoint data utama membutuhkan bearer token user. Data `questions`, `attempts`, `attempt_answers`, `flashcards`, `word_quizzes`, dan `cloze_tests` dibatasi oleh RLS `user_id = auth.uid()`.
+
+## Upload File
+
+Di halaman `Input Soal`, gunakan panel `Upload File ke InsForge`.
 
 Aplikasi akan menghasilkan tag seperti:
 
@@ -96,6 +114,8 @@ Aplikasi akan menghasilkan tag seperti:
 ```
 
 Tempel tag tersebut ke teks soal, opsi jawaban, pembahasan, flashcard, Adu Kata, atau Fill-in-the-Blank.
+
+File yang diupload dari form ini juga otomatis dilampirkan ke soal manual berikutnya yang disimpan.
 
 ## Deploy ke GitHub
 
