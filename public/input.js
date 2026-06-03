@@ -156,13 +156,19 @@ function selectedSubtest() {
   return catalog.find((subtest) => subtest.key === subtestSelect.value) || catalog[0];
 }
 
+function normalizeCatalogKey(key) {
+  return String(key || '').trim().toLowerCase().replaceAll('_', '-');
+}
+
 function findSubtest(key) {
-  return catalog.find((subtest) => subtest.key === key);
+  const normalizedKey = normalizeCatalogKey(key);
+  return catalog.find((subtest) => subtest.key === normalizedKey);
 }
 
 function findMateri(subtestKey, materiKey) {
   const subtest = findSubtest(subtestKey);
-  return subtest ? subtest.materi.find((materi) => materi.key === materiKey) : null;
+  const normalizedKey = normalizeCatalogKey(materiKey);
+  return subtest ? subtest.materi.find((materi) => materi.key === normalizedKey) : null;
 }
 
 function renderSubtestOptions() {

@@ -168,14 +168,20 @@ function normalizeAnswer(answer) {
   return String(answer || '').trim().toUpperCase();
 }
 
+function normalizeCatalogKey(key) {
+  return String(key || '').trim().toLowerCase().replaceAll('_', '-');
+}
+
 function findSubtest(key) {
-  return EXAM_CATALOG.find((subtest) => subtest.key === key);
+  const normalizedKey = normalizeCatalogKey(key);
+  return EXAM_CATALOG.find((subtest) => subtest.key === normalizedKey);
 }
 
 function findMateri(subtestKey, materiKey) {
   const subtest = findSubtest(subtestKey);
   if (!subtest) return null;
-  return subtest.materi.find((materi) => materi.key === materiKey) || null;
+  const normalizedKey = normalizeCatalogKey(materiKey);
+  return subtest.materi.find((materi) => materi.key === normalizedKey) || null;
 }
 
 function asArrayPayload(req, key) {
