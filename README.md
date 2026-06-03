@@ -61,7 +61,6 @@ PORT=3000
 INSFORGE_BASE_URL=https://acfzi5wy.ap-southeast.insforge.app
 INSFORGE_ANON_KEY=
 INSFORGE_STORAGE_BUCKET=uploads
-DOKPLOY_ADMIN_TOKEN=
 ```
 
 Keterangan:
@@ -69,7 +68,6 @@ Keterangan:
 - `INSFORGE_BASE_URL`: base URL backend InsForge.
 - `INSFORGE_ANON_KEY`: anon key dari dashboard/project InsForge.
 - `INSFORGE_STORAGE_BUCKET`: bucket untuk gambar.
-- `DOKPLOY_ADMIN_TOKEN`: token admin Dokploy untuk utilitas API internal. Isi manual di server, jangan hardcode.
 
 ## Instalasi Lokal
 
@@ -134,12 +132,11 @@ PORT=3000
 INSFORGE_BASE_URL=https://acfzi5wy.ap-southeast.insforge.app
 INSFORGE_ANON_KEY=<isi dari InsForge>
 INSFORGE_STORAGE_BUCKET=uploads
-DOKPLOY_ADMIN_TOKEN=<isi token admin Dokploy>
 ```
 
 5. Deploy.
 
-Jangan memasukkan token atau isi `.env` ke GitHub.
+Jangan memasukkan token atau isi `.env` ke GitHub. `DOKPLOY_ADMIN_TOKEN` bukan environment aplikasi web; token itu hanya credential operator untuk menjalankan API Dokploy dari luar aplikasi.
 
 ## Docker
 
@@ -168,4 +165,4 @@ Fungsi yang tersedia:
 - `getSystemHealth()`: GET `/settings.health`
 - `restartDockerContainer(containerId)`: POST `/docker.restartContainer`
 
-Token selalu dibaca dari `process.env.DOKPLOY_ADMIN_TOKEN`.
+Token selalu dibaca dari `process.env.DOKPLOY_ADMIN_TOKEN` hanya saat utilitas ini dijalankan sebagai tool/operator script. Jangan set token ini sebagai environment runtime aplikasi CBT di Dokploy.
